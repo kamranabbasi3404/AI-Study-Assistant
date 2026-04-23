@@ -24,26 +24,34 @@ export async function processDocument(
   await connectDB();
 
   // Step 1: Extract text
+  console.log('Pipeline: Extracting text...');
   const text = isText
     ? extractFromText(file as string)
     : await extractFromPDF(file as Buffer);
 
+  console.log(`Pipeline: Extracted ${text.length} characters`);
   if (!text || text.length < 50) {
     throw new Error('Document has insufficient text content');
   }
 
   // Step 2: Smart chunking
+  console.log('Pipeline: Chunking text...');
   const { chunks, headings } = chunkText(text);
+  console.log(`Pipeline: Created ${chunks.length} chunks`);
 
   if (chunks.length === 0) {
     throw new Error('Could not extract any meaningful chunks from document');
   }
 
   // Step 3: Generate embeddings for all chunks
+  console.log(`Pipeline: Generating embeddings for ${chunks.length} chunks...`);
   const embeddings = await generateEmbeddings(chunks);
+  console.log('Pipeline: Embeddings generated successfully');
 
   // Step 4: Detect topics using AI
+  console.log('Pipeline: Detecting topics...');
   const detectedTopics = await detectTopics(chunks, headings);
+  console.log(`Pipeline: Detected ${detectedTopics.length} topics`);
 
   // Step 5: Save document
   const title = filename.replace(/\.(pdf|txt)$/i, '').replace(/[-_]/g, ' ');

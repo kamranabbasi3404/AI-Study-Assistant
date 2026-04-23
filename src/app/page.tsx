@@ -1,290 +1,207 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-interface Stats {
-  totalAnswered: number;
-  accuracy: number;
-  streak: number;
-  dueReviews: number;
-  documentCount: number;
-  weakTopics: {
-    topicId: string;
-    topicName: string;
-    strength: 'strong' | 'medium' | 'weak';
-    accuracy: number;
-    totalAnswered: number;
-    recentTrend: 'improving' | 'declining' | 'stable';
+interface DashboardStats {
+  totalDocuments: number;
+  totalQuestionsAnswered: number;
+  averageAccuracy: number;
+  studyTimeToday: number;
+  recentActivity: {
+    type: 'upload' | 'quiz' | 'review';
+    title: string;
+    timestamp: string;
+    description: string;
   }[];
-  dailyAccuracy: { date: string; accuracy: number }[];
+  topicStrength: {
+    name: string;
+    strength: number; // 0-100
+  }[];
 }
 
-function AnimatedCounter({ value, suffix = '' }: { value: number; suffix?: string }) {
-  const [display, setDisplay] = useState(0);
-
-  useEffect(() => {
-    let start = 0;
-    const end = value;
-    if (end === 0) return;
-    const duration = 1000;
-    const stepTime = duration / end;
-    const timer = setInterval(() => {
-      start += 1;
-      setDisplay(start);
-      if (start >= end) clearInterval(timer);
-    }, Math.max(stepTime, 16));
-    return () => clearInterval(timer);
-  }, [value]);
-
-  return <span>{display}{suffix}</span>;
-}
-
-export default function Dashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
+export default function DashboardPage() {
+  const { user } = useUser();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/stats')
-      .then((r) => r.json())
-      .then((data) => {
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
         setStats(data);
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    }
+    fetchStats();
   }, []);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p style={{ color: 'var(--color-text-secondary)' }}>Loading your study data...</p>
-        </div>
+        <div className="w-12 h-12 border-4 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  const statCards = [
-    {
-      label: 'Documents',
-      value: stats?.documentCount || 0,
-      icon: '📚',
-      gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-    },
-    {
-      label: 'Questions Answered',
-      value: stats?.totalAnswered || 0,
-      icon: '✅',
-      gradient: 'linear-gradient(135deg, #06b6d4, #22d3ee)',
-    },
-    {
-      label: 'Accuracy',
-      value: stats?.accuracy || 0,
-      icon: '🎯',
-      suffix: '%',
-      gradient: 'linear-gradient(135deg, #22c55e, #4ade80)',
-    },
-    {
-      label: 'Study Streak',
-      value: stats?.streak || 0,
-      icon: '🔥',
-      suffix: ' days',
-      gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-    },
-  ];
+  if (!stats) return null;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold gradient-text">Dashboard</h1>
-          <p className="mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-            Your learning overview at a glance
-          </p>
-        </div>
-        <Link href="/upload" className="btn-primary flex items-center gap-2">
-          <span>+</span> Upload Notes
-        </Link>
+    <div className="space-y-8 fade-in">
+      {/* Welcome Section */}
+      <section>
+        <h1 className="text-4xl font-bold gradient-text">
+          Welcome back, {user?.firstName || 'Student'}!
+        </h1>
+        <p className="mt-2" style={{ color: 'var(--color-text-secondary)' }}>
+          Here&apos;s your study progress for today. Ready to learn something new?
+        </p>
+      </section>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard 
+          icon="📚" 
+          label="Documents" 
+          value={stats.totalDocuments} 
+          subtext="Total study materials"
+        />
+        <StatCard 
+          icon="🎯" 
+          label="Questions" 
+          value={stats.totalQuestionsAnswered} 
+          subtext="Answered this week"
+        />
+        <StatCard 
+          icon="📈" 
+          label="Accuracy" 
+          value={`${stats.averageAccuracy}%`} 
+          subtext="Mastery level"
+        />
+        <StatCard 
+          icon="⏱️" 
+          label="Study Time" 
+          value={`${stats.studyTimeToday}m`} 
+          subtext="Time spent today"
+        />
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card, i) => (
-          <div
-            key={i}
-            className="glass-card p-6 slide-up"
-            style={{ animationDelay: `${i * 100}ms` }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                style={{ background: card.gradient }}
-              >
-                {card.icon}
-              </span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content: Recent Activity */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="glass-card p-6 h-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold">Recent Activity</h2>
+              <Link href="/documents" className="text-sm font-medium hover:underline" style={{ color: 'var(--color-accent-primary)' }}>
+                View All
+              </Link>
             </div>
-            <div
-              className="text-3xl font-bold mb-1"
-              style={{ fontFamily: 'var(--font-mono)' }}
-            >
-              <AnimatedCounter value={card.value} suffix={card.suffix || ''} />
-            </div>
-            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              {card.label}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Due Reviews Alert */}
-      {(stats?.dueReviews || 0) > 0 && (
-        <Link
-          href="/review"
-          className="glass-card p-5 flex items-center justify-between pulse-glow cursor-pointer block"
-        >
-          <div className="flex items-center gap-4">
-            <span className="text-3xl">⏰</span>
-            <div>
-              <p className="font-semibold text-lg">
-                You have {stats?.dueReviews} cards due for review
-              </p>
-              <p style={{ color: 'var(--color-text-secondary)' }}>
-                Don&apos;t break your streak! Review now to strengthen your memory.
-              </p>
-            </div>
-          </div>
-          <span className="btn-primary hidden sm:inline-block">Start Review</span>
-        </Link>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Weak Topics */}
-        <div className="glass-card p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <span>🎯</span> Topic Strengths
-          </h2>
-          {!stats?.weakTopics?.length ? (
-            <div className="text-center py-8" style={{ color: 'var(--color-text-muted)' }}>
-              <p className="text-4xl mb-3">📝</p>
-              <p>Upload notes and take quizzes to see your topic strengths</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stats.weakTopics.map((topic) => (
-                <div
-                  key={topic.topicId}
-                  className="flex items-center justify-between p-3 rounded-xl"
-                  style={{ background: 'rgba(10, 10, 26, 0.5)' }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <p className="font-medium text-sm">{topic.topicName}</p>
-                      <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        {topic.totalAnswered} questions •{' '}
-                        {topic.recentTrend === 'improving'
-                          ? '📈 Improving'
-                          : topic.recentTrend === 'declining'
-                          ? '📉 Declining'
-                          : '➡️ Stable'}
-                      </p>
+            
+            <div className="space-y-6">
+              {stats.recentActivity.length === 0 ? (
+                <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
+                  <p>No recent activity yet. Start by uploading some notes in the chat!</p>
+                  <Link href="/chat" className="btn-primary mt-4 inline-block">
+                    Open Chat
+                  </Link>
+                </div>
+              ) : (
+                stats.recentActivity.map((activity, i) => (
+                  <div key={i} className="flex gap-4 group">
+                    <div className="flex flex-col items-center">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: 'rgba(124, 58, 237, 0.15)' }}>
+                        {activity.type === 'upload' ? '📄' : activity.type === 'quiz' ? '🎯' : '🔄'}
+                      </div>
+                      {i !== stats.recentActivity.length - 1 && (
+                        <div className="w-0.5 h-full mt-2" style={{ background: 'var(--color-border)' }} />
+                      )}
+                    </div>
+                    <div className="pb-6">
+                      <p className="font-bold">{activity.title}</p>
+                      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{activity.description}</p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{activity.timestamp}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="text-sm font-mono font-bold"
-                      style={{
-                        color:
-                          topic.strength === 'strong'
-                            ? 'var(--color-success)'
-                            : topic.strength === 'medium'
-                            ? 'var(--color-warning)'
-                            : 'var(--color-danger)',
-                      }}
-                    >
-                      {topic.accuracy}%
-                    </span>
-                    <span className={`strength-badge strength-${topic.strength}`}>
-                      {topic.strength}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Accuracy Chart */}
-        <div className="glass-card p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <span>📈</span> 7-Day Accuracy
-          </h2>
-          {!stats?.dailyAccuracy?.some((d) => d.accuracy > 0) ? (
-            <div className="text-center py-8" style={{ color: 'var(--color-text-muted)' }}>
-              <p className="text-4xl mb-3">📊</p>
-              <p>Start answering questions to see your accuracy trend</p>
+        {/* Sidebar: Topic Strength */}
+        <div className="space-y-6">
+          <div className="glass-card p-6">
+            <h2 className="text-xl font-bold mb-6">Topic Strength</h2>
+            <div className="space-y-4">
+              {stats.topicStrength.length === 0 ? (
+                <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
+                  Upload notes and take quizzes to see your topic strengths
+                </p>
+              ) : (
+                stats.topicStrength.slice(0, 5).map((topic, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium truncate max-w-[150px]">{topic.name}</span>
+                      <span className="font-bold" style={{ 
+                        color: topic.strength >= 80 ? 'var(--color-success)' : topic.strength >= 50 ? 'var(--color-accent-primary)' : 'var(--color-danger)'
+                      }}>
+                        {topic.strength}%
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-1000"
+                        style={{ 
+                          width: `${topic.strength}%`,
+                          background: topic.strength >= 80 ? 'var(--color-success)' : topic.strength >= 50 ? 'var(--color-accent-primary)' : 'var(--color-danger)'
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-          ) : (
-            <div className="flex items-end gap-2 h-48">
-              {stats.dailyAccuracy.map((day, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                  <span
-                    className="text-xs font-mono"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    {day.accuracy}%
-                  </span>
-                  <div
-                    className="w-full rounded-t-lg transition-all duration-500"
-                    style={{
-                      height: `${Math.max(day.accuracy * 1.5, 4)}px`,
-                      background:
-                        day.accuracy >= 80
-                          ? 'linear-gradient(to top, #22c55e, #4ade80)'
-                          : day.accuracy >= 50
-                          ? 'linear-gradient(to top, #eab308, #fbbf24)'
-                          : day.accuracy > 0
-                          ? 'linear-gradient(to top, #ef4444, #f87171)'
-                          : 'var(--color-border)',
-                    }}
-                  />
-                  <span
-                    className="text-xs"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    {new Date(day.date).toLocaleDateString('en', { weekday: 'short' })}
-                  </span>
-                </div>
-              ))}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="glass-card p-6 bg-gradient-to-br from-[rgba(124,58,237,0.1)] to-transparent">
+            <h2 className="text-xl font-bold mb-4">Quick Start</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <Link href="/chat" className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-colors border border-[var(--color-border)]">
+                <span className="text-2xl mb-2">📄</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Upload Notes</span>
+              </Link>
+              <Link href="/chat" className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-colors border border-[var(--color-border)]">
+                <span className="text-2xl mb-1">💬</span>
+                <span className="text-xs font-bold uppercase tracking-wider">AI Chat</span>
+              </Link>
             </div>
-          )}
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link href="/upload" className="glass-card p-6 text-center group cursor-pointer block">
-          <span className="text-4xl block mb-3 group-hover:scale-110 transition-transform">📄</span>
-          <p className="font-semibold">Upload Notes</p>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            PDF or text files
-          </p>
-        </Link>
-        <Link href="/quiz" className="glass-card p-6 text-center group cursor-pointer block">
-          <span className="text-4xl block mb-3 group-hover:scale-110 transition-transform">🎯</span>
-          <p className="font-semibold">Take a Quiz</p>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            Test your knowledge
-          </p>
-        </Link>
-        <Link href="/chat" className="glass-card p-6 text-center group cursor-pointer block">
-          <span className="text-4xl block mb-3 group-hover:scale-110 transition-transform">💬</span>
-          <p className="font-semibold">Ask AI</p>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            Chat with your notes
-          </p>
-        </Link>
+function StatCard({ icon, label, value, subtext }: { icon: string; label: string; value: string | number; subtext: string }) {
+  return (
+    <div className="glass-card p-6 flex items-start gap-4 hover:scale-[1.02] transition-transform duration-300">
+      <div className="text-3xl p-3 rounded-2xl" style={{ background: 'rgba(124, 58, 237, 0.1)' }}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--color-text-muted)' }}>
+          {label}
+        </p>
+        <p className="text-3xl font-black">{value}</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+          {subtext}
+        </p>
       </div>
     </div>
   );

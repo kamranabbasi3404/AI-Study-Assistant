@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
+import Link from 'next/link';
+import ConfirmDialog from '@/components/ConfirmDialog';
 interface Document {
   _id: string;
   title: string;
@@ -16,6 +17,8 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [expandedDocs, setExpandedDocs] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchDocuments();
@@ -33,11 +36,15 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this document and all related quizzes, performance data, and review schedules?')) {
-      return;
-    }
+  const requestDelete = (id: string) => {
+    setDeleteConfirmId(id);
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    const id = deleteConfirmId;
+    setDeleteConfirmId(null);
+    
     setDeleting(id);
     try {
       await fetch(`/api/documents/${id}`, { method: 'DELETE' });
@@ -66,9 +73,9 @@ export default function DocumentsPage() {
             {documents.length} document{documents.length !== 1 ? 's' : ''} uploaded
           </p>
         </div>
-        <a href="/upload" className="btn-primary flex items-center gap-2">
+        <Link href="/chat" className="btn-primary flex items-center gap-2">
           <span>+</span> Upload New
-        </a>
+        </Link>
       </div>
 
       {documents.length === 0 ? (
@@ -78,10 +85,10 @@ export default function DocumentsPage() {
           <p className="mb-6" style={{ color: 'var(--color-text-muted)' }}>
             Upload your study notes to get started with AI-powered learning.
           </p>
-          <a href="/upload" className="btn-primary inline-block">Upload Notes</a>
+          <Link href="/chat" className="btn-primary inline-block">Go to Chat to Upload</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 items-start">
           {documents.map((doc, i) => (
             <div
               key={doc._id}
@@ -104,7 +111,7 @@ export default function DocumentsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDelete(doc._id)}
+                  onClick={() => requestDelete(doc._id)}
                   disabled={deleting === doc._id}
                   className="p-2 rounded-lg hover:bg-red-500/10 transition-colors text-sm"
                   style={{ color: 'var(--color-text-muted)' }}
@@ -122,10 +129,10 @@ export default function DocumentsPage() {
 
               {/* Topics */}
               <div className="flex flex-wrap gap-2">
-                {doc.topics.map((topic) => (
+                {(expandedDocs[doc._id] ? doc.topics : doc.topics.slice(0, 4)).map((topic) => (
                   <span
                     key={topic._id}
-                    className="text-xs px-3 py-1 rounded-lg"
+                    className="text-xs px-3 py-1 rounded-lg transition-all"
                     style={{
                       background: 'rgba(124, 58, 237, 0.1)',
                       color: 'var(--color-accent-secondary)',
@@ -135,11 +142,33 @@ export default function DocumentsPage() {
                     {topic.name}
                   </span>
                 ))}
+                {doc.topics.length > 4 && (
+                  <button
+                    onClick={() => setExpandedDocs(prev => ({ ...prev, [doc._id]: !prev[doc._id] }))}
+                    className="text-xs px-3 py-1 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)] font-medium"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      border: '1px dashed var(--color-border)',
+                    }}
+                  >
+                    {expandedDocs[doc._id] ? 'Show Less' : `+${doc.topics.length - 4} More`}
+                  </button>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        title="Delete Document"
+        message="Are you sure you want to delete this document? All related quizzes, performance data, and review schedules will also be deleted. This action cannot be undone."
+        confirmText="Delete Document"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </div>
   );
 }

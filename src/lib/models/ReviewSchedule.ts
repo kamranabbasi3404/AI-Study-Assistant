@@ -26,6 +26,5 @@ const ReviewScheduleSchema = new Schema<IReviewSchedule>(
 );
 
 ReviewScheduleSchema.index({ nextReview: 1 });
-ReviewScheduleSchema.index({ questionId: 1 });
 
 export default mongoose.models.ReviewSchedule || mongoose.model<IReviewSchedule>('ReviewSchedule', ReviewScheduleSchema);

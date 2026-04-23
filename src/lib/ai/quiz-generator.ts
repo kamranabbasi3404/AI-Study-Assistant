@@ -3,6 +3,7 @@ import { searchByTopic, searchSimilarChunks } from '@/lib/vector-store';
 import connectDB from '@/lib/db';
 import Question from '@/lib/models/Question';
 import Topic from '@/lib/models/Topic';
+import Document from '@/lib/models/Document';
 import ReviewSchedule from '@/lib/models/ReviewSchedule';
 
 interface QuizOptions {
@@ -22,15 +23,29 @@ export async function generateQuiz(options: QuizOptions) {
   if (!topic) throw new Error('Topic not found');
 
   // RAG: retrieve relevant chunks for this topic
-  const queryEmbedding = await generateEmbedding(`Generate quiz questions about ${topic.name}`);
-  const relevantChunks = await searchByTopic(queryEmbedding, userId, topicId, 8);
+  let relevantChunks: any[] = [];
+  try {
+    const queryEmbedding = await generateEmbedding(`Identify content related to: ${topic.name}`);
+    relevantChunks = await searchByTopic(queryEmbedding, userId, topicId, 10);
 
-  if (relevantChunks.length === 0) {
-    // Fallback: search across all chunks for this document
-    const allChunks = await searchSimilarChunks(queryEmbedding, userId, 8, String(topic.documentId));
-    if (allChunks.length === 0) throw new Error('No content found for this topic');
-    relevantChunks.push(...allChunks);
+    if (relevantChunks.length === 0) {
+      console.log('QuizGen: No specific chunks found for topic, searching whole document...');
+      const docId = topic.documentId && typeof topic.documentId === 'object' && '_id' in topic.documentId 
+        ? String(topic.documentId._id) 
+        : String(topic.documentId);
+      relevantChunks = await searchSimilarChunks(queryEmbedding, userId, 15, docId);
+    }
+  } catch (e) {
+    console.error('QuizGen: Vector search failed, falling back to all chunks:', e);
   }
+
+  // Final fallback: just get some chunks from the document if search failed
+  if (relevantChunks.length === 0) {
+    const ChunkModel = (await import('@/lib/models/Chunk')).default;
+    relevantChunks = await ChunkModel.find({ documentId: topic.documentId }).limit(10).lean();
+  }
+
+  if (relevantChunks.length === 0) throw new Error('No content found in document to generate quiz');
 
   const context = relevantChunks.map((c) => c.content).join('\n\n---\n\n');
 

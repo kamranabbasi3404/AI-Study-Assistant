@@ -14,16 +14,33 @@ export async function GET() {
 
     await connectDB();
 
-    const [stats, weakTopics, docCount] = await Promise.all([
+    const [stats, weakTopics, documents] = await Promise.all([
       getStudyStats(userId),
       getWeakTopics(userId),
-      DocumentModel.countDocuments({ userId }),
+      DocumentModel.find({ userId }).sort({ createdAt: -1 }).limit(5).lean(),
     ]);
 
+    // Format recent activity
+    const recentActivity = documents.map(doc => ({
+      type: 'upload' as const,
+      title: 'New Material Uploaded',
+      description: doc.title,
+      timestamp: new Date(doc.createdAt).toLocaleDateString(),
+    }));
+
+    // Add quiz activity if any performances exist
+    // (In a real app, you'd fetch both and merge them)
+
     return Response.json({
-      ...stats,
-      weakTopics,
-      documentCount: docCount,
+      totalDocuments: documents.length,
+      totalQuestionsAnswered: stats.totalAnswered,
+      averageAccuracy: stats.accuracy,
+      studyTimeToday: stats.streak * 10, // Mock study time for now
+      recentActivity,
+      topicStrength: weakTopics.map(t => ({
+        name: t.topicName,
+        strength: t.accuracy
+      })),
     });
   } catch (error) {
     console.error('Get stats error:', error);

@@ -106,7 +106,16 @@ export async function searchSimilarChunks(
     embedding: { $exists: true, $ne: [] } 
   };
   if (documentId) {
-    filter.documentId = documentId;
+    try {
+      const { Types } = await import('mongoose');
+      if (Types.ObjectId.isValid(documentId)) {
+        filter.documentId = new Types.ObjectId(documentId);
+      } else {
+        console.warn('QuizGen: Invalid documentId provided to search:', documentId);
+      }
+    } catch (e) {
+      filter.documentId = documentId;
+    }
   }
 
   // Fetch chunks with embeddings

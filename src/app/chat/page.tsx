@@ -1,18 +1,160 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface Message {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
   sources?: string[];
+  type?: 'chat' | 'quiz';
+  quizData?: any[];
+}
+
+function InlineQuiz({ questions }: { questions: any[] }) {
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [showResults, setShowResults] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  const calculateScore = () => {
+    return questions.reduce((score, q, i) => score + (answers[i] === q.correctAnswer ? 1 : 0), 0);
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setSubmitError('');
+
+    try {
+      const submissions = questions.map((q, i) => ({
+        questionId: q._id,
+        answer: answers[i],
+        timeTakenMs: 15000, // approximate time taken
+      })).filter(s => s.questionId); // Only submit if they have a DB ID
+
+      if (submissions.length > 0) {
+        const res = await fetch('/api/chat/submit-quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ submissions })
+        });
+        
+        if (!res.ok) throw new Error('Failed to save progress');
+      }
+      
+      setShowResults(true);
+    } catch (err) {
+      setSubmitError('Failed to save to Review Schedule, but showing results anyway.');
+      setShowResults(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 space-y-6 w-full max-w-full">
+      {questions.map((q, i) => (
+        <div key={i} className="p-4 rounded-xl" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <p className="font-semibold mb-3">{i + 1}. {q.question}</p>
+          <div className="space-y-2">
+            {q.options?.map((opt: string, j: number) => {
+              const isSelected = answers[i] === opt;
+              const isCorrect = opt === q.correctAnswer;
+              
+              let btnStyle = {};
+              if (showResults) {
+                if (isCorrect) btnStyle = { background: 'rgba(34, 197, 94, 0.2)', border: '1px solid var(--color-success)', color: 'var(--color-success)' };
+                else if (isSelected && !isCorrect) btnStyle = { background: 'rgba(239, 68, 68, 0.2)', border: '1px solid var(--color-danger)', color: 'var(--color-danger)' };
+                else btnStyle = { background: 'rgba(255,255,255,0.05)', opacity: 0.5 };
+              } else {
+                if (isSelected) btnStyle = { background: 'rgba(124, 58, 237, 0.2)', border: '1px solid var(--color-accent-primary)' };
+                else btnStyle = { background: 'rgba(255,255,255,0.05)', border: '1px solid transparent' };
+              }
+
+              return (
+                <button
+                  key={j}
+                  onClick={() => !showResults && setAnswers(prev => ({ ...prev, [i]: opt }))}
+                  disabled={showResults}
+                  className="w-full text-left p-3 rounded-lg text-sm transition-all hover:bg-[rgba(255,255,255,0.1)]"
+                  style={btnStyle}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+          {showResults && (
+            <div className="mt-3 p-3 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,0.05)' }}>
+              <p className="font-semibold text-[var(--color-accent-secondary)]">Explanation:</p>
+              <p className="text-[var(--color-text-secondary)] mt-1">{q.explanation}</p>
+            </div>
+          )}
+        </div>
+      ))}
+      
+      {!showResults ? (
+        <button 
+          onClick={handleSubmit}
+          disabled={Object.keys(answers).length < questions.length || submitting}
+          className="btn-primary w-full py-3 flex items-center justify-center gap-2"
+        >
+          {submitting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+          {submitting ? 'Saving Progress...' : 'Submit Answers'}
+        </button>
+      ) : (
+        <div className="text-center p-4 rounded-xl space-y-2" style={{ background: 'rgba(124, 58, 237, 0.15)' }}>
+          <p className="font-bold text-lg">Score: {calculateScore()} / {questions.length}</p>
+          <p className="text-sm text-[var(--color-success)]">✅ Progress saved to Review Schedule</p>
+          {submitError && <p className="text-xs text-[var(--color-danger)]">{submitError}</p>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ChatPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get('session');
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch session messages on mount
+  useEffect(() => {
+    if (sessionId) {
+      setLoading(true);
+      setMessages([]); // Clear previous messages while loading
+      fetch(`/api/chat/sessions/${sessionId}?_t=${Date.now()}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && Array.isArray(data.messages)) {
+            setMessages(data.messages.map((m: any) => ({ ...m, questions: m.quizData || m.questions })));
+            if (data.documentId) {
+              setActiveDocumentId(data.documentId);
+            } else {
+              setActiveDocumentId(null);
+            }
+          } else if (Array.isArray(data)) {
+            // Fallback just in case backend didn't update yet
+            setMessages(data.map((m: any) => ({ ...m, questions: m.quizData || m.questions })));
+          } else {
+            setMessages([]);
+          }
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setMessages([]);
+      setActiveDocumentId(null);
+    }
+  }, [sessionId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -30,14 +172,22 @@ export default function ChatPage() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMsg.content }),
+        body: JSON.stringify({ question: userMsg.content, sessionId, documentId: activeDocumentId }),
       });
 
       const data = await res.json();
+      
+      // Update URL if a new session was created
+      if (!sessionId && data.sessionId) {
+        router.replace(`/chat?session=${data.sessionId}`);
+      }
+
       const assistantMsg: Message = {
         role: 'assistant',
-        content: data.answer || data.error || 'No response generated',
+        content: data.message || data.answer || data.error || 'No response generated',
         sources: data.sources,
+        type: data.type || 'chat',
+        quizData: data.questions,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch {
@@ -47,6 +197,75 @@ export default function ChatPage() {
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    
+    // Add temporary system message with a unique ID
+    const tempId = Date.now().toString();
+    setMessages((prev) => [
+      ...prev,
+      { id: tempId, role: 'assistant', content: `⏳ Uploading and analyzing ${file.name}...` },
+    ]);
+
+    try {
+      // 1. Ensure we have a session
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        const sessionRes = await fetch('/api/chat/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: `Upload: ${file.name}` })
+        });
+        const sessionData = await sessionRes.json();
+        currentSessionId = sessionData._id;
+        router.replace(`/chat?session=${currentSessionId}`);
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      
+      // Update active document ID
+      if (data.documentId) {
+        setActiveDocumentId(data.documentId);
+      }
+
+      const successContent = `✅ Successfully uploaded **${file.name}**!\n\nI've extracted ${data.topicCount} topics. You can now ask me questions about it, or tell me to generate a quiz.`;
+
+      // 2. Save success message to DB
+      if (currentSessionId) {
+        await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'assistant', content: successContent })
+        });
+      }
+
+      // Replace the temporary message with the success message
+      setMessages((prev) => [
+        ...prev.filter(m => m.id !== tempId),
+        { role: 'assistant', content: successContent }
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev.filter(m => m.id !== tempId),
+        { role: 'assistant', content: `❌ Failed to upload ${file.name}. Please try again.` }
+      ]);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -114,6 +333,11 @@ export default function ChatPage() {
             >
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
 
+              {/* Inline Quiz */}
+              {msg.type === 'quiz' && msg.quizData && (
+                <InlineQuiz questions={msg.quizData} />
+              )}
+
               {/* Sources */}
               {msg.sources && msg.sources.length > 0 && (
                 <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
@@ -148,23 +372,40 @@ export default function ChatPage() {
 
       {/* Input */}
       <div
-        className="flex gap-3 p-4 rounded-2xl"
+        className="flex gap-3 p-4 rounded-2xl items-center"
         style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
       >
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept=".pdf,.txt" 
+          onChange={handleFileUpload} 
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading || loading}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.05)] transition-colors text-xl"
+          style={{ color: 'var(--color-text-secondary)' }}
+          title="Upload a document"
+        >
+          +
+        </button>
+
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-          placeholder="Ask a question about your study notes..."
+          placeholder="Ask anything or generate a quiz..."
           className="flex-1 bg-transparent outline-none text-sm"
           style={{ color: 'var(--color-text-primary)' }}
         />
         <button
           onClick={sendMessage}
-          disabled={!input.trim() || loading}
+          disabled={!input.trim() || loading || uploading}
           className={`px-6 py-2 rounded-xl font-semibold text-sm transition-all ${
-            !input.trim() || loading
+            !input.trim() || loading || uploading
               ? 'bg-[rgba(42,42,90,0.3)] text-[var(--color-text-muted)] cursor-not-allowed'
               : 'btn-primary'
           }`}

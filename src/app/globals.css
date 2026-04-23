@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
-@theme {
-  --color-bg-primary: #0a0a1a;
-  --color-bg-secondary: #12122a;
-  --color-bg-card: #1a1a3e;
-  --color-bg-card-hover: #222255;
-  --color-border: #2a2a5a;
-  --color-text-primary: #e8e8f0;
-  --color-text-secondary: #9595b5;
-  --color-text-muted: #6565a0;
-  --color-accent-primary: #7c3aed;
-  --color-accent-secondary: #a855f7;
-  --color-accent-pink: #ec4899;
-  --color-accent-cyan: #06b6d4;
-  --color-success: #22c55e;
-  --color-warning: #eab308;
-  --color-danger: #ef4444;
-  --color-strong: #22c55e;
-  --color-medium: #eab308;
-  --color-weak: #ef4444;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+@layer base {
+  :root {
+    --color-bg-primary: #0a0a1a;
+    --color-bg-secondary: #12122a;
+    --color-bg-card: #1a1a3e;
+    --color-bg-card-hover: #222255;
+    --color-border: #2a2a5a;
+    --color-text-primary: #e8e8f0;
+    --color-text-secondary: #9595b5;
+    --color-text-muted: #6565a0;
+    --color-accent-primary: #7c3aed;
+    --color-accent-secondary: #a855f7;
+    --color-accent-pink: #ec4899;
+    --color-accent-cyan: #06b6d4;
+    --color-success: #22c55e;
+    --color-warning: #eab308;
+    --color-danger: #ef4444;
+    --color-strong: #22c55e;
+    --color-medium: #eab308;
+    --color-weak: #ef4444;
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
 }
 
 @layer base {
@@ -92,6 +94,7 @@
     padding: 1px;
     background: linear-gradient(135deg, #7c3aed, #a855f7, #ec4899);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;

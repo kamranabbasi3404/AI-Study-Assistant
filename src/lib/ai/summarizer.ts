@@ -55,12 +55,25 @@ export async function chatWithNotes(
   const context = relevantChunks.map((c, i) => `[Source ${i + 1}] ${c.content}`).join('\n\n');
   const sources = relevantChunks.map((c) => c.heading || c.content.substring(0, 80));
 
-  const systemPrompt = `You are a knowledgeable study tutor. Answer the student's question using ONLY the provided study material. If the answer is not in the material, say so.
+  // Fetch topics metadata to provide context
+  const { default: Topic } = await import('@/lib/models/Topic');
+  const topicQuery = documentId ? { userId, documentId } : { userId };
+  const topics = await Topic.find(topicQuery).lean();
+  const topicsContext = topics.length > 0 
+    ? `Metadata - Available Topics in Notes: ${topics.map(t => t.name).join(', ')}\n\n`
+    : '';
 
-Reference specific parts of the material in your answer. Be educational and clear.`;
+  const systemPrompt = `You are a strict, restricted AI study tutor. You MUST ONLY answer questions based on the provided Study Material (which includes metadata and extracted text chunks).
+
+CRITICAL RULES:
+1. If the user asks a general knowledge question, a personal question, or ANY question whose answer is NOT found in or cannot be deduced from the provided Study Material, you MUST refuse to answer.
+2. If refusing, use this exact phrase: "I can only answer questions related to your study material. This question is out of bounds."
+3. DO NOT use your general knowledge to fill in gaps.
+4. You ARE ALLOWED to summarize, explain, or categorize the provided material if asked (e.g. explaining which topics are hard/easy based on your analysis of the names).
+5. Reference specific parts of the material in your answer. Be educational and clear.`;
 
   const userPrompt = `Study Material:
-${context}
+${topicsContext}${context}
 
 Student's Question: ${question}`;
 
