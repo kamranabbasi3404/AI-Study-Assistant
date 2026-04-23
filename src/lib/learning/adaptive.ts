@@ -105,7 +105,7 @@ export async function getStudyStats() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    let checkDate = new Date(today);
+    const checkDate = new Date(today);
     const dateSet = new Set(
       performances.map((p) => {
         const d = new Date(p.answeredAt);

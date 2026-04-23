@@ -1,7 +1,7 @@
 // PDF text extraction using pdf-parse
-// @ts-ignore - pdf-parse has broken types
+// @ts-expect-error - pdf-parse has broken types
 import pdfParse from 'pdf-parse';
-// @ts-ignore - pdf-parse types are broken
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parse = pdfParse as any;
 
 export async function extractFromPDF(buffer: Buffer): Promise<string> {

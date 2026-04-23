@@ -37,7 +37,7 @@ export function chunkText(
   let currentChunk = '';
   let currentHeading = '';
   let currentTokens = 0;
-  const overlapTokens = Math.floor(maxTokens * overlapFraction);
+
 
   for (const line of lines) {
     const lineTokens = estimateTokens(line);

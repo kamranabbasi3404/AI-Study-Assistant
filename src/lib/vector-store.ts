@@ -22,6 +22,76 @@ export interface SearchResult {
   score: number;
 }
 
+class MinHeap {
+  private heap: SearchResult[];
+
+  constructor() {
+    this.heap = [];
+  }
+
+  get size() {
+    return this.heap.length;
+  }
+
+  push(item: SearchResult) {
+    this.heap.push(item);
+    this.bubbleUp(this.heap.length - 1);
+  }
+
+  pop(): SearchResult | undefined {
+    if (this.heap.length === 0) return undefined;
+    if (this.heap.length === 1) return this.heap.pop();
+
+    const top = this.heap[0];
+    this.heap[0] = this.heap.pop() as SearchResult;
+    this.sinkDown(0);
+    return top;
+  }
+
+  peek(): SearchResult | undefined {
+    return this.heap[0];
+  }
+
+  toArray(): SearchResult[] {
+    return [...this.heap];
+  }
+
+  private bubbleUp(index: number) {
+    while (index > 0) {
+      const parentIndex = Math.floor((index - 1) / 2);
+      if (this.heap[parentIndex].score <= this.heap[index].score) break;
+      this.swap(index, parentIndex);
+      index = parentIndex;
+    }
+  }
+
+  private sinkDown(index: number) {
+    const length = this.heap.length;
+    while (true) {
+      let smallest = index;
+      const leftChild = 2 * index + 1;
+      const rightChild = 2 * index + 2;
+
+      if (leftChild < length && this.heap[leftChild].score < this.heap[smallest].score) {
+        smallest = leftChild;
+      }
+      if (rightChild < length && this.heap[rightChild].score < this.heap[smallest].score) {
+        smallest = rightChild;
+      }
+
+      if (smallest === index) break;
+      this.swap(index, smallest);
+      index = smallest;
+    }
+  }
+
+  private swap(i: number, j: number) {
+    const temp = this.heap[i];
+    this.heap[i] = this.heap[j];
+    this.heap[j] = temp;
+  }
+}
+
 export async function searchSimilarChunks(
   queryEmbedding: number[],
   topK: number = 5,
@@ -38,19 +108,30 @@ export async function searchSimilarChunks(
   // Fetch chunks with embeddings
   const chunks = await Chunk.find(filter).lean();
 
-  // Calculate similarity for each chunk
-  const scored = chunks.map((chunk) => ({
-    chunkId: String(chunk._id),
-    documentId: String(chunk.documentId),
-    topicId: chunk.topicId ? String(chunk.topicId) : null,
-    content: chunk.content,
-    heading: chunk.heading || '',
-    score: cosineSimilarity(queryEmbedding, chunk.embedding as number[]),
-  }));
+  const minHeap = new MinHeap();
 
-  // Sort by score descending and return top K
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, topK);
+  // Calculate similarity for each chunk and keep topK in heap
+  for (const chunk of chunks) {
+    const score = cosineSimilarity(queryEmbedding, chunk.embedding as number[]);
+    const result: SearchResult = {
+      chunkId: String(chunk._id),
+      documentId: String(chunk.documentId),
+      topicId: chunk.topicId ? String(chunk.topicId) : null,
+      content: chunk.content,
+      heading: chunk.heading || '',
+      score,
+    };
+
+    if (minHeap.size < topK) {
+      minHeap.push(result);
+    } else if (minHeap.peek()!.score < score) {
+      minHeap.pop();
+      minHeap.push(result);
+    }
+  }
+
+  // Sort descending and return
+  return minHeap.toArray().sort((a, b) => b.score - a.score);
 }
 
 export async function searchByTopic(
@@ -65,15 +146,26 @@ export async function searchByTopic(
     embedding: { $exists: true, $ne: [] },
   }).lean();
 
-  const scored = chunks.map((chunk) => ({
-    chunkId: String(chunk._id),
-    documentId: String(chunk.documentId),
-    topicId: chunk.topicId ? String(chunk.topicId) : null,
-    content: chunk.content,
-    heading: chunk.heading || '',
-    score: cosineSimilarity(queryEmbedding, chunk.embedding as number[]),
-  }));
+  const minHeap = new MinHeap();
 
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, topK);
+  for (const chunk of chunks) {
+    const score = cosineSimilarity(queryEmbedding, chunk.embedding as number[]);
+    const result: SearchResult = {
+      chunkId: String(chunk._id),
+      documentId: String(chunk.documentId),
+      topicId: chunk.topicId ? String(chunk.topicId) : null,
+      content: chunk.content,
+      heading: chunk.heading || '',
+      score,
+    };
+
+    if (minHeap.size < topK) {
+      minHeap.push(result);
+    } else if (minHeap.peek()!.score < score) {
+      minHeap.pop();
+      minHeap.push(result);
+    }
+  }
+
+  return minHeap.toArray().sort((a, b) => b.score - a.score);
 }
