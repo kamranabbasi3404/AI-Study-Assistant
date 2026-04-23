@@ -66,13 +66,25 @@ export async function recordAnswer(
 export async function getWeakTopics(): Promise<TopicStrength[]> {
   await connectDB();
 
-  const topics = await Topic.find().lean();
+  const [topics, allPerformances] = await Promise.all([
+    Topic.find().lean(),
+    Performance.find().sort({ answeredAt: -1 }).lean(),
+  ]);
+
+  // Use a Map (Hash Map) to group performances by topicId for O(1) retrieval
+  const performancesByTopic = new Map<string, any[]>();
+  for (const p of allPerformances) {
+    const topicId = String(p.topicId);
+    if (!performancesByTopic.has(topicId)) {
+      performancesByTopic.set(topicId, []);
+    }
+    performancesByTopic.get(topicId)!.push(p);
+  }
+
   const strengths: TopicStrength[] = [];
 
   for (const topic of topics) {
-    const performances = await Performance.find({ topicId: topic._id })
-      .sort({ answeredAt: -1 })
-      .lean();
+    const performances = performancesByTopic.get(String(topic._id)) || [];
 
     if (performances.length === 0) {
       strengths.push({

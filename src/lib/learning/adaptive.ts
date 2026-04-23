@@ -86,28 +86,28 @@ export async function getDueReviews(limit: number = 20) {
 export async function getStudyStats() {
   await connectDB();
 
-  const totalAnswered = await Performance.countDocuments();
-  const totalCorrect = await Performance.countDocuments({ isCorrect: true });
+  const now = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const [allPerformances, dueCount] = await Promise.all([
+    Performance.find().sort({ answeredAt: -1 }).lean(),
+    ReviewSchedule.countDocuments({ nextReview: { $lte: now } }),
+  ]);
+
+  const totalAnswered = allPerformances.length;
+  const totalCorrect = allPerformances.filter((p) => p.isCorrect).length;
   const accuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
 
-  // Due reviews
-  const now = new Date();
-  const dueCount = await ReviewSchedule.countDocuments({ nextReview: { $lte: now } });
-
-  // Study streak (days with at least one answer)
-  const performances = await Performance.find()
-    .sort({ answeredAt: -1 })
-    .select('answeredAt')
-    .lean();
-
+  // Study streak calculation using a Set for O(1) lookups
   let streak = 0;
-  if (performances.length > 0) {
+  if (totalAnswered > 0) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const checkDate = new Date(today);
     const dateSet = new Set(
-      performances.map((p) => {
+      allPerformances.map((p) => {
         const d = new Date(p.answeredAt);
         return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       })
@@ -124,26 +124,35 @@ export async function getStudyStats() {
     }
   }
 
-  // Recent accuracy trend (last 7 days)
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const recentPerformances = await Performance.find({
-    answeredAt: { $gte: sevenDaysAgo },
-  }).lean();
-
+  // Daily accuracy for last 7 days using a Map for efficient grouping
   const dailyAccuracy: { date: string; accuracy: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
+  const perfsByDate = new Map<string, { total: number; correct: number }>();
+
+  // Initialize last 7 days
+  for (let i = 0; i < 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
-    const dayPerfs = recentPerformances.filter((p) => {
-      const pd = new Date(p.answeredAt).toISOString().split('T')[0];
-      return pd === dateStr;
-    });
-    const dayAccuracy = dayPerfs.length > 0
-      ? Math.round((dayPerfs.filter((p) => p.isCorrect).length / dayPerfs.length) * 100)
-      : 0;
-    dailyAccuracy.push({ date: dateStr, accuracy: dayAccuracy });
+    perfsByDate.set(dateStr, { total: 0, correct: 0 });
+  }
+
+  // Populate data
+  for (const p of allPerformances) {
+    if (p.answeredAt < sevenDaysAgo) continue;
+    const dateStr = new Date(p.answeredAt).toISOString().split('T')[0];
+    const data = perfsByDate.get(dateStr);
+    if (data) {
+      data.total++;
+      if (p.isCorrect) data.correct++;
+    }
+  }
+
+  // Format result
+  const sortedDates = Array.from(perfsByDate.keys()).sort();
+  for (const dateStr of sortedDates) {
+    const data = perfsByDate.get(dateStr)!;
+    const acc = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0;
+    dailyAccuracy.push({ date: dateStr, accuracy: acc });
   }
 
   return {
