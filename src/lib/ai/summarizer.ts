@@ -4,10 +4,10 @@ import connectDB from '@/lib/db';
 import Chunk from '@/lib/models/Chunk';
 import Topic from '@/lib/models/Topic';
 
-export async function generateDocumentSummary(documentId: string): Promise<string> {
+export async function generateDocumentSummary(documentId: string, userId: string): Promise<string> {
   await connectDB();
 
-  const chunks = await Chunk.find({ documentId }).sort({ chunkIndex: 1 }).lean();
+  const chunks = await Chunk.find({ userId, documentId }).sort({ chunkIndex: 1 }).lean();
   const content = chunks.map((c) => c.content).join('\n\n');
 
   const systemPrompt = `You are a study assistant. Create a comprehensive but concise summary of the following study material. Organize by topics, highlight key concepts, and include important definitions.
@@ -21,13 +21,13 @@ Format:
   return generateCompletion(systemPrompt, `Summarize this study material:\n\n${content.substring(0, 8000)}`, 0.5);
 }
 
-export async function generateTopicSummary(topicId: string): Promise<string> {
+export async function generateTopicSummary(topicId: string, userId: string): Promise<string> {
   await connectDB();
 
-  const topic = await Topic.findById(topicId);
+  const topic = await Topic.findOne({ _id: topicId, userId });
   if (!topic) throw new Error('Topic not found');
 
-  const chunks = await Chunk.find({ topicId }).sort({ chunkIndex: 1 }).lean();
+  const chunks = await Chunk.find({ userId, topicId }).sort({ chunkIndex: 1 }).lean();
   const content = chunks.map((c) => c.content).join('\n\n');
 
   const systemPrompt = `You are a study assistant. Create a focused summary of the topic "${topic.name}". Include:
@@ -43,13 +43,14 @@ Be concise but educational.`;
 
 export async function chatWithNotes(
   question: string,
+  userId: string,
   documentId?: string
 ): Promise<{ answer: string; sources: string[] }> {
   await connectDB();
 
   // RAG: find relevant chunks
   const queryEmbedding = await generateEmbedding(question);
-  const relevantChunks = await searchSimilarChunks(queryEmbedding, 5, documentId);
+  const relevantChunks = await searchSimilarChunks(queryEmbedding, userId, 5, documentId);
 
   const context = relevantChunks.map((c, i) => `[Source ${i + 1}] ${c.content}`).join('\n\n');
   const sources = relevantChunks.map((c) => c.heading || c.content.substring(0, 80));

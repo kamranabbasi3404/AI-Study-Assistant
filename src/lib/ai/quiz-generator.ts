@@ -7,6 +7,7 @@ import ReviewSchedule from '@/lib/models/ReviewSchedule';
 
 interface QuizOptions {
   topicId: string;
+  userId: string;
   count?: number;
   types?: ('mcq' | 'short_answer' | 'concept')[];
   difficulty?: 'easy' | 'medium' | 'hard';
@@ -14,19 +15,19 @@ interface QuizOptions {
 
 export async function generateQuiz(options: QuizOptions) {
   await connectDB();
-  const { topicId, count = 5, types = ['mcq', 'short_answer', 'concept'], difficulty = 'medium' } = options;
+  const { topicId, userId, count = 5, types = ['mcq', 'short_answer', 'concept'], difficulty = 'medium' } = options;
 
   // Get topic info
-  const topic = await Topic.findById(topicId).populate('documentId');
+  const topic = await Topic.findOne({ _id: topicId, userId }).populate('documentId');
   if (!topic) throw new Error('Topic not found');
 
   // RAG: retrieve relevant chunks for this topic
   const queryEmbedding = await generateEmbedding(`Generate quiz questions about ${topic.name}`);
-  const relevantChunks = await searchByTopic(queryEmbedding, topicId, 8);
+  const relevantChunks = await searchByTopic(queryEmbedding, userId, topicId, 8);
 
   if (relevantChunks.length === 0) {
     // Fallback: search across all chunks for this document
-    const allChunks = await searchSimilarChunks(queryEmbedding, 8, String(topic.documentId));
+    const allChunks = await searchSimilarChunks(queryEmbedding, userId, 8, String(topic.documentId));
     if (allChunks.length === 0) throw new Error('No content found for this topic');
     relevantChunks.push(...allChunks);
   }
@@ -91,6 +92,7 @@ Generate ${count} ${difficulty} level questions about this topic.`;
   const savedQuestions = await Promise.all(
     questions.map(async (q: Record<string, unknown>) => {
       const question = await Question.create({
+        userId,
         documentId: topic.documentId,
         topicId: topic._id,
         type: q.type || 'mcq',
@@ -103,6 +105,7 @@ Generate ${count} ${difficulty} level questions about this topic.`;
 
       // Create review schedule for spaced repetition
       await ReviewSchedule.create({
+        userId,
         questionId: question._id,
         topicId: topic._id,
         nextReview: new Date(),

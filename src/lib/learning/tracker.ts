@@ -16,6 +16,7 @@ export interface TopicStrength {
 
 export async function recordAnswer(
   questionId: string,
+  userId: string,
   isCorrect: boolean,
   timeTakenMs: number,
   userAnswer: string
@@ -27,6 +28,7 @@ export async function recordAnswer(
 
   // Record performance
   await Performance.create({
+    userId,
     questionId,
     topicId: question.topicId,
     isCorrect,
@@ -36,7 +38,7 @@ export async function recordAnswer(
   });
 
   // Update spaced repetition schedule
-  const schedule = await ReviewSchedule.findOne({ questionId });
+  const schedule = await ReviewSchedule.findOne({ userId, questionId });
   if (schedule) {
     const quality = performanceToQuality(isCorrect, timeTakenMs);
     const result = calculateSM2(
@@ -63,12 +65,12 @@ export async function recordAnswer(
   };
 }
 
-export async function getWeakTopics(): Promise<TopicStrength[]> {
+export async function getWeakTopics(userId: string): Promise<TopicStrength[]> {
   await connectDB();
 
   const [topics, allPerformances] = await Promise.all([
-    Topic.find().lean(),
-    Performance.find().sort({ answeredAt: -1 }).lean(),
+    Topic.find({ userId }).lean(),
+    Performance.find({ userId }).sort({ answeredAt: -1 }).lean(),
   ]);
 
   // Use a Map (Hash Map) to group performances by topicId for O(1) retrieval
@@ -135,7 +137,7 @@ export async function getWeakTopics(): Promise<TopicStrength[]> {
   return strengths;
 }
 
-export async function getTopicStrength(topicId: string): Promise<TopicStrength | null> {
-  const all = await getWeakTopics();
+export async function getTopicStrength(topicId: string, userId: string): Promise<TopicStrength | null> {
+  const all = await getWeakTopics(userId);
   return all.find((t) => t.topicId === topicId) || null;
 }

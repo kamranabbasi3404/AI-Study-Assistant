@@ -94,13 +94,17 @@ class MinHeap {
 
 export async function searchSimilarChunks(
   queryEmbedding: number[],
+  userId: string,
   topK: number = 5,
   documentId?: string
 ): Promise<SearchResult[]> {
   await connectDB();
 
   // Build query filter
-  const filter: Record<string, unknown> = { embedding: { $exists: true, $ne: [] } };
+  const filter: Record<string, unknown> = { 
+    userId,
+    embedding: { $exists: true, $ne: [] } 
+  };
   if (documentId) {
     filter.documentId = documentId;
   }
@@ -136,12 +140,14 @@ export async function searchSimilarChunks(
 
 export async function searchByTopic(
   queryEmbedding: number[],
+  userId: string,
   topicId: string,
   topK: number = 5
 ): Promise<SearchResult[]> {
   await connectDB();
 
   const chunks = await Chunk.find({
+    userId,
     topicId,
     embedding: { $exists: true, $ne: [] },
   }).lean();

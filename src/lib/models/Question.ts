@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IQuestion extends Document {
+  userId: string;
   documentId: mongoose.Types.ObjectId;
   topicId: mongoose.Types.ObjectId;
   type: 'mcq' | 'short_answer' | 'concept';
@@ -14,6 +15,7 @@ export interface IQuestion extends Document {
 
 const QuestionSchema = new Schema<IQuestion>(
   {
+    userId: { type: String, required: true, index: true },
     documentId: { type: Schema.Types.ObjectId, ref: 'Document', required: true },
     topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
     type: { type: String, enum: ['mcq', 'short_answer', 'concept'], required: true },

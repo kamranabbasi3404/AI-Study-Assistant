@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IChunk extends Document {
+  userId: string;
   documentId: mongoose.Types.ObjectId;
   topicId: mongoose.Types.ObjectId | null;
   content: string;
@@ -13,6 +14,7 @@ export interface IChunk extends Document {
 
 const ChunkSchema = new Schema<IChunk>(
   {
+    userId: { type: String, required: true, index: true },
     documentId: { type: Schema.Types.ObjectId, ref: 'Document', required: true },
     topicId: { type: Schema.Types.ObjectId, ref: 'Topic', default: null },
     content: { type: String, required: true },

@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IReviewSchedule extends Document {
+  userId: string;
   questionId: mongoose.Types.ObjectId;
   topicId: mongoose.Types.ObjectId;
   easeFactor: number;
@@ -12,6 +13,7 @@ export interface IReviewSchedule extends Document {
 
 const ReviewScheduleSchema = new Schema<IReviewSchedule>(
   {
+    userId: { type: String, required: true, index: true },
     questionId: { type: Schema.Types.ObjectId, ref: 'Question', required: true, unique: true },
     topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
     easeFactor: { type: Number, default: 2.5 },

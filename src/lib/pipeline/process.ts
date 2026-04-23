@@ -18,6 +18,7 @@ export interface ProcessingResult {
 export async function processDocument(
   file: Buffer | string,
   filename: string,
+  userId: string,
   isText: boolean = false
 ): Promise<ProcessingResult> {
   await connectDB();
@@ -47,6 +48,7 @@ export async function processDocument(
   // Step 5: Save document
   const title = filename.replace(/\.(pdf|txt)$/i, '').replace(/[-_]/g, ' ');
   const doc = await DocumentModel.create({
+    userId,
     title,
     originalFilename: filename,
     content: text,
@@ -58,6 +60,7 @@ export async function processDocument(
   const topicDocs = await Promise.all(
     detectedTopics.map((t) =>
       Topic.create({
+        userId,
         documentId: doc._id,
         name: t.name,
         difficultyLevel: t.difficulty,
@@ -76,6 +79,7 @@ export async function processDocument(
       const topicId = topicIndex >= 0 ? topicDocs[topicIndex]._id : null;
 
       return Chunk.create({
+        userId,
         documentId: doc._id,
         topicId,
         content,

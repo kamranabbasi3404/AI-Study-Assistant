@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ITopic extends Document {
+  userId: string;
   documentId: mongoose.Types.ObjectId;
   name: string;
   difficultyLevel: 'easy' | 'medium' | 'hard';
@@ -10,6 +11,7 @@ export interface ITopic extends Document {
 
 const TopicSchema = new Schema<ITopic>(
   {
+    userId: { type: String, required: true, index: true },
     documentId: { type: Schema.Types.ObjectId, ref: 'Document', required: true },
     name: { type: String, required: true },
     difficultyLevel: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },

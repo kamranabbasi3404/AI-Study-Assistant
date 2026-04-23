@@ -4,8 +4,15 @@ import { processDocument } from '@/lib/pipeline/process';
 import DocumentModel from '@/lib/models/Document';
 import Topic from '@/lib/models/Topic';
 
+import { auth } from '@clerk/nextjs/server';
+
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -20,9 +27,9 @@ export async function POST(request: NextRequest) {
     let result;
     if (isText) {
       const text = buffer.toString('utf-8');
-      result = await processDocument(text, filename, true);
+      result = await processDocument(text, filename, userId, true);
     } else {
-      result = await processDocument(buffer, filename, false);
+      result = await processDocument(buffer, filename, userId, false);
     }
 
     return Response.json(result, { status: 201 });
@@ -37,16 +44,21 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
 
-    const documents = await DocumentModel.find()
+    const documents = await DocumentModel.find({ userId })
       .sort({ createdAt: -1 })
       .lean();
 
     // Get topics for each document
     const docsWithTopics = await Promise.all(
       documents.map(async (doc) => {
-        const topics = await Topic.find({ documentId: doc._id }).lean();
+        const topics = await Topic.find({ userId, documentId: doc._id }).lean();
         return {
           ...doc,
           _id: String(doc._id),

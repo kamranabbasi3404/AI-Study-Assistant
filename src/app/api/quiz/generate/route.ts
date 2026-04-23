@@ -2,8 +2,15 @@ import { NextRequest } from 'next/server';
 import { generateQuiz } from '@/lib/ai/quiz-generator';
 import { getNextDifficulty } from '@/lib/learning/adaptive';
 
+import { auth } from '@clerk/nextjs/server';
+
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { topicId, count = 5, types = ['mcq', 'short_answer', 'concept'], difficulty } = body;
 
@@ -14,12 +21,13 @@ export async function POST(request: NextRequest) {
     // If no difficulty specified, use adaptive difficulty
     let finalDifficulty = difficulty;
     if (!finalDifficulty) {
-      const adaptive = await getNextDifficulty(topicId);
+      const adaptive = await getNextDifficulty(topicId, userId);
       finalDifficulty = adaptive.difficulty;
     }
 
     const questions = await generateQuiz({
       topicId,
+      userId,
       count,
       types,
       difficulty: finalDifficulty,

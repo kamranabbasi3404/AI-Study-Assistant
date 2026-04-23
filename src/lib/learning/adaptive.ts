@@ -11,11 +11,12 @@ import Question from '@/lib/models/Question';
  * - 2+ wrong in a row → decrease difficulty + show explanation
  */
 export async function getNextDifficulty(
-  topicId: string
+  topicId: string,
+  userId: string
 ): Promise<{ difficulty: 'easy' | 'medium' | 'hard'; shouldShowExplanation: boolean }> {
   await connectDB();
 
-  const recentPerformances = await Performance.find({ topicId })
+  const recentPerformances = await Performance.find({ userId, topicId })
     .sort({ answeredAt: -1 })
     .limit(5)
     .lean();
@@ -39,7 +40,7 @@ export async function getNextDifficulty(
   }
 
   // Get current difficulty of last question
-  const lastQuestion = await Question.findById(recentPerformances[0].questionId);
+  const lastQuestion = await Question.findOne({ _id: recentPerformances[0].questionId, userId });
   const currentDifficulty = lastQuestion?.difficulty || 'medium';
 
   let difficulty: 'easy' | 'medium' | 'hard' = currentDifficulty as 'easy' | 'medium' | 'hard';
@@ -62,11 +63,12 @@ export async function getNextDifficulty(
 /**
  * Get questions due for spaced repetition review
  */
-export async function getDueReviews(limit: number = 20) {
+export async function getDueReviews(userId: string, limit: number = 20) {
   await connectDB();
 
   const now = new Date();
   const dueSchedules = await ReviewSchedule.find({
+    userId,
     nextReview: { $lte: now },
   })
     .sort({ nextReview: 1 })
@@ -83,7 +85,7 @@ export async function getDueReviews(limit: number = 20) {
 /**
  * Get study statistics
  */
-export async function getStudyStats() {
+export async function getStudyStats(userId: string) {
   await connectDB();
 
   const now = new Date();
@@ -91,8 +93,8 @@ export async function getStudyStats() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
   const [allPerformances, dueCount] = await Promise.all([
-    Performance.find().sort({ answeredAt: -1 }).lean(),
-    ReviewSchedule.countDocuments({ nextReview: { $lte: now } }),
+    Performance.find({ userId }).sort({ answeredAt: -1 }).lean(),
+    ReviewSchedule.countDocuments({ userId, nextReview: { $lte: now } }),
   ]);
 
   const totalAnswered = allPerformances.length;

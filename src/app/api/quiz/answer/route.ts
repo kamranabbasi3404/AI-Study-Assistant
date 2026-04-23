@@ -2,8 +2,15 @@ import { NextRequest } from 'next/server';
 import { recordAnswer } from '@/lib/learning/tracker';
 import { generateExplanation } from '@/lib/ai/explainer';
 
+import { auth } from '@clerk/nextjs/server';
+
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { questionId, answer, timeTakenMs = 0 } = body;
 
@@ -14,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await recordAnswer(questionId, false, timeTakenMs, answer);
+    const result = await recordAnswer(questionId, userId, false, timeTakenMs, answer);
 
     // Check if answer is correct (compare case-insensitive for text answers)
     const isCorrect = answer.trim().toLowerCase() === result.correctAnswer.trim().toLowerCase()
@@ -22,14 +29,14 @@ export async function POST(request: NextRequest) {
 
     // Re-record with correct value
     if (isCorrect !== result.isCorrect) {
-      await recordAnswer(questionId, isCorrect, timeTakenMs, answer);
+      await recordAnswer(questionId, userId, isCorrect, timeTakenMs, answer);
     }
 
     // Generate detailed explanation if wrong
     let detailedExplanation = result.explanation;
     if (!isCorrect) {
       try {
-        detailedExplanation = await generateExplanation(questionId, answer);
+        detailedExplanation = await generateExplanation(questionId, answer, userId);
       } catch {
         // Use stored explanation as fallback
       }

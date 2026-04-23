@@ -5,17 +5,19 @@ import Question from '@/lib/models/Question';
 
 export async function generateExplanation(
   questionId: string,
-  userAnswer: string
+  userAnswer: string,
+  userId: string
 ): Promise<string> {
   await connectDB();
 
-  const question = await Question.findById(questionId);
+  const question = await Question.findOne({ _id: questionId, userId });
   if (!question) throw new Error('Question not found');
 
   // RAG: find relevant content to ground the explanation
   const queryEmbedding = await generateEmbedding(question.question);
   const relevantChunks = await searchSimilarChunks(
     queryEmbedding,
+    userId,
     3,
     String(question.documentId)
   );

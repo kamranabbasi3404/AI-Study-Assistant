@@ -3,14 +3,21 @@ import { getStudyStats } from '@/lib/learning/adaptive';
 import { getWeakTopics } from '@/lib/learning/tracker';
 import DocumentModel from '@/lib/models/Document';
 
+import { auth } from '@clerk/nextjs/server';
+
 export async function GET() {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
 
     const [stats, weakTopics, docCount] = await Promise.all([
-      getStudyStats(),
-      getWeakTopics(),
-      DocumentModel.countDocuments(),
+      getStudyStats(userId),
+      getWeakTopics(userId),
+      DocumentModel.countDocuments({ userId }),
     ]);
 
     return Response.json({

@@ -4,9 +4,16 @@ import { getDueReviews } from '@/lib/learning/adaptive';
 import ReviewSchedule from '@/lib/models/ReviewSchedule';
 import { calculateSM2 } from '@/lib/learning/sm2';
 
+import { auth } from '@clerk/nextjs/server';
+
 export async function GET() {
   try {
-    const dueReviews = await getDueReviews(20);
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const dueReviews = await getDueReviews(userId, 20);
 
     return Response.json({
       reviews: dueReviews.map((r) => ({
@@ -28,6 +35,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const body = await request.json();
     const { questionId, quality } = body;
@@ -39,7 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const schedule = await ReviewSchedule.findOne({ questionId });
+    const schedule = await ReviewSchedule.findOne({ userId, questionId });
     if (!schedule) {
       return Response.json({ error: 'Review schedule not found' }, { status: 404 });
     }

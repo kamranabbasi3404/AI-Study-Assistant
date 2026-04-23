@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { UserButton, SignInButton, useAuth } from "@clerk/nextjs";
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: '📊' },
@@ -16,6 +17,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { isSignedIn } = useAuth();
 
   return (
     <>
@@ -94,6 +96,28 @@ export default function Sidebar() {
             );
           })}
         </nav>
+
+        {/* User Profile */}
+        <div className="p-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+          {isSignedIn ? (
+            <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : 'px-2'}`}>
+              <UserButton />
+              {!collapsed && (
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">Account</span>
+                  <span className="text-xs text-muted">Manage settings</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <SignInButton mode="modal">
+              <button className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-[rgba(42,42,90,0.5)] transition-all`}>
+                <span className="text-xl">👤</span>
+                {!collapsed && <span>Sign In</span>}
+              </button>
+            </SignInButton>
+          )}
+        </div>
 
         {/* Collapse toggle (desktop only) */}
         <button
