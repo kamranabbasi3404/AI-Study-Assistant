@@ -6,10 +6,12 @@ import { useState, useEffect } from 'react';
 import { UserButton, SignInButton, useAuth } from "@clerk/nextjs";
 import ConfirmDialog from './ConfirmDialog';
 
+import { BarChart2, BookOpen, RotateCcw, Sparkles, MessageSquare, Pencil, Trash2, User } from 'lucide-react';
+
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: '📊' },
-  { href: '/documents', label: 'Documents', icon: '📚' },
-  { href: '/review', label: 'Review', icon: '🔄' },
+  { href: '/', label: 'Dashboard', icon: <BarChart2 className="w-5 h-5" /> },
+  { href: '/documents', label: 'Documents', icon: <BookOpen className="w-5 h-5" /> },
+  { href: '/review', label: 'Review', icon: <RotateCcw className="w-5 h-5" /> },
 ];
 
 interface ChatSession {
@@ -109,7 +111,7 @@ export default function Sidebar() {
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold"
               style={{
-                background: 'linear-gradient(135deg, #7c3aed, #ec4899)',
+                background: 'linear-gradient(135deg, var(--color-accent-primary), #ec4899)',
               }}
             >
               🧠
@@ -152,7 +154,7 @@ export default function Sidebar() {
             className="w-full flex items-center justify-center gap-2 mb-4 py-3 rounded-xl btn-primary shadow-lg transition-transform hover:scale-105 active:scale-95"
             style={{ fontWeight: 'bold' }}
           >
-            <span className="text-xl">✨</span>
+            <span className="flex items-center justify-center"><Sparkles className="w-5 h-5" /></span>
             {!collapsed && <span>New Chat</span>}
           </button>
 
@@ -171,15 +173,15 @@ export default function Sidebar() {
                     ? 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(168,85,247,0.1))'
                     : 'transparent',
                   color: isActive
-                    ? '#a855f7'
+                    ? 'var(--color-accent-secondary)'
                     : 'var(--color-text-secondary)',
-                  borderLeft: isActive ? '3px solid #a855f7' : '3px solid transparent',
+                  borderLeft: isActive ? '3px solid var(--color-accent-secondary)' : '3px solid transparent',
                 }}
                 onClick={() => {
                   if (window.innerWidth < 1024) setCollapsed(true);
                 }}
               >
-                <span className="text-xl">{item.icon}</span>
+                <span className="flex items-center justify-center">{item.icon}</span>
                 {!collapsed && <span>{item.label}</span>}
               </Link>
             );
@@ -194,7 +196,7 @@ export default function Sidebar() {
               <div className="space-y-1">
                 {sessions.slice(0, 10).map((session) => (
                   <div key={session._id} className="group relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm hover:bg-[rgba(255,255,255,0.05)] transition-colors">
-                    <span className="text-base opacity-70">💬</span>
+                    <span className="opacity-70"><MessageSquare className="w-4 h-4" /></span>
                     {editingId === session._id ? (
                       <input
                         autoFocus
@@ -228,14 +230,14 @@ export default function Sidebar() {
                           className="p-1 hover:text-[var(--color-accent-primary)] transition-colors"
                           title="Rename"
                         >
-                          ✏️
+                          <Pencil className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={(e) => requestDelete(session._id, e)}
                           className="p-1 hover:text-red-500 transition-colors"
                           title="Delete"
                         >
-                          🗑️
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     )}
@@ -261,7 +263,7 @@ export default function Sidebar() {
           ) : (
             <SignInButton mode="modal">
               <button className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-[rgba(42,42,90,0.5)] transition-all`}>
-                <span className="text-xl">👤</span>
+                <span className="flex items-center justify-center"><User className="w-5 h-5" /></span>
                 {!collapsed && <span>Sign In</span>}
               </button>
             </SignInButton>

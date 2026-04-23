@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
+import { BookOpen, Check, Clipboard, MessageSquare, Loader2, CheckCircle, XCircle } from 'lucide-react';
 
 interface Message {
   id?: string;
@@ -68,7 +70,7 @@ function InlineQuiz({ questions }: { questions: any[] }) {
                 else if (isSelected && !isCorrect) btnStyle = { background: 'rgba(239, 68, 68, 0.2)', border: '1px solid var(--color-danger)', color: 'var(--color-danger)' };
                 else btnStyle = { background: 'rgba(255,255,255,0.05)', opacity: 0.5 };
               } else {
-                if (isSelected) btnStyle = { background: 'rgba(124, 58, 237, 0.2)', border: '1px solid var(--color-accent-primary)' };
+                if (isSelected) btnStyle = { background: 'rgba(37, 99, 235, 0.2)', border: '1px solid var(--color-accent-primary)' };
                 else btnStyle = { background: 'rgba(255,255,255,0.05)', border: '1px solid transparent' };
               }
 
@@ -104,13 +106,63 @@ function InlineQuiz({ questions }: { questions: any[] }) {
           {submitting ? 'Saving Progress...' : 'Submit Answers'}
         </button>
       ) : (
-        <div className="text-center p-4 rounded-xl space-y-2" style={{ background: 'rgba(124, 58, 237, 0.15)' }}>
+        <div className="text-center p-4 rounded-xl space-y-2" style={{ background: 'rgba(37, 99, 235, 0.15)' }}>
           <p className="font-bold text-lg">Score: {calculateScore()} / {questions.length}</p>
-          <p className="text-sm text-[var(--color-success)]">✅ Progress saved to Review Schedule</p>
+          <p className="text-sm text-[var(--color-success)] flex items-center justify-center gap-1"><Check className="w-4 h-4" /> Progress saved to Review Schedule</p>
           {submitError && <p className="text-xs text-[var(--color-danger)]">{submitError}</p>}
         </div>
       )}
     </div>
+  );
+}
+
+function MessageSources({ sources }: { sources: string[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!sources || sources.length === 0) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="text-xs font-semibold mb-1 flex items-center gap-1 transition-opacity" 
+        style={{ color: 'var(--color-text-muted)', cursor: 'pointer' }}
+      >
+        <span className="hover:text-[var(--color-accent-primary)] transition-colors flex items-center gap-1"><BookOpen className="w-3 h-3" /> View Sources</span>
+        <span className="text-[10px] ml-1">{isOpen ? '▼' : '▶'}</span>
+      </button>
+      
+      {isOpen && (
+        <div className="mt-2 space-y-1 fade-in">
+          {sources.map((source, j) => (
+            <p key={j} className="text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
+              • {source}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="p-1 rounded-md hover:bg-[rgba(255,255,255,0.1)] transition-colors text-xs flex items-center gap-1"
+      style={{ color: 'var(--color-text-muted)', cursor: 'pointer' }}
+      title="Copy message"
+    >
+      {copied ? <Check className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+    </button>
   );
 }
 
@@ -168,6 +220,10 @@ export default function ChatPage() {
     setInput('');
     setLoading(true);
 
+    // Reset textarea height
+    const textarea = document.querySelector('textarea');
+    if (textarea) textarea.style.height = '40px';
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -209,7 +265,7 @@ export default function ChatPage() {
     const tempId = Date.now().toString();
     setMessages((prev) => [
       ...prev,
-      { id: tempId, role: 'assistant', content: `⏳ Uploading and analyzing ${file.name}...` },
+      { id: tempId, role: 'assistant', content: `Uploading and analyzing ${file.name}...` },
     ]);
 
     try {
@@ -242,7 +298,7 @@ export default function ChatPage() {
         setActiveDocumentId(data.documentId);
       }
 
-      const successContent = `✅ Successfully uploaded **${file.name}**!\n\nI've extracted ${data.topicCount} topics. You can now ask me questions about it, or tell me to generate a quiz.`;
+      const successContent = `Successfully uploaded **${file.name}**!\n\nI've extracted ${data.topicCount} topics. You can now ask me questions about it, or tell me to generate a quiz.`;
 
       // 2. Save success message to DB
       if (currentSessionId) {
@@ -261,7 +317,7 @@ export default function ChatPage() {
     } catch (err) {
       setMessages((prev) => [
         ...prev.filter(m => m.id !== tempId),
-        { role: 'assistant', content: `❌ Failed to upload ${file.name}. Please try again.` }
+        { role: 'assistant', content: `Failed to upload ${file.name}. Please try again.` }
       ]);
     } finally {
       setUploading(false);
@@ -285,7 +341,7 @@ export default function ChatPage() {
       >
         {messages.length === 0 && (
           <div className="text-center py-16">
-            <span className="text-7xl block mb-4">💬</span>
+            <div className="flex justify-center text-[var(--color-text-muted)] mb-4"><MessageSquare className="w-16 h-16" /></div>
             <h2 className="text-xl font-semibold mb-2">Ask anything about your notes</h2>
             <p style={{ color: 'var(--color-text-muted)' }}>
               Your questions will be answered using RAG — retrieving relevant chunks from your uploaded documents.
@@ -302,9 +358,9 @@ export default function ChatPage() {
                   onClick={() => setInput(suggestion)}
                   className="text-xs px-4 py-2 rounded-xl transition-all"
                   style={{
-                    background: 'rgba(124, 58, 237, 0.1)',
-                    border: '1px solid rgba(124, 58, 237, 0.2)',
-                    color: 'var(--color-accent-secondary)',
+                    background: 'rgba(37, 99, 235, 0.1)',
+                    border: '1px solid rgba(37, 99, 235, 0.2)',
+                    color: 'var(--color-accent-primary)',
                   }}
                 >
                   {suggestion}
@@ -320,18 +376,31 @@ export default function ChatPage() {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] p-4 rounded-2xl ${
+              className={`max-w-[80%] p-4 rounded-2xl relative group ${
                 msg.role === 'user' ? 'rounded-br-md' : 'rounded-bl-md'
               }`}
               style={{
                 background:
                   msg.role === 'user'
-                    ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
+                    ? 'linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary))'
                     : 'var(--color-bg-card)',
+                color: msg.role === 'user' ? 'white' : 'var(--color-text-primary)',
                 border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
               }}
             >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              {msg.role === 'assistant' && (
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <CopyButton text={msg.content} />
+                </div>
+              )}
+              
+              {msg.role === 'assistant' ? (
+                <div className="text-sm leading-relaxed whitespace-pre-wrap markdown-content">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              )}
 
               {/* Inline Quiz */}
               {msg.type === 'quiz' && msg.quizData && (
@@ -340,16 +409,7 @@ export default function ChatPage() {
 
               {/* Sources */}
               {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
-                  <p className="text-xs font-semibold mb-1" style={{ color: 'var(--color-text-muted)' }}>
-                    📚 Sources from your notes:
-                  </p>
-                  {msg.sources.map((source, j) => (
-                    <p key={j} className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                      • {source}
-                    </p>
-                  ))}
-                </div>
+                <MessageSources sources={msg.sources} />
               )}
             </div>
           </div>
@@ -392,14 +452,23 @@ export default function ChatPage() {
           +
         </button>
 
-        <input
-          type="text"
+        <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
+          onInput={(e) => {
+            const target = e.currentTarget;
+            target.style.height = '40px';
+            target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
+          }}
           placeholder="Ask anything or generate a quiz..."
-          className="flex-1 bg-transparent outline-none text-sm"
-          style={{ color: 'var(--color-text-primary)' }}
+          className="flex-1 bg-transparent outline-none text-sm resize-none py-2"
+          style={{ color: 'var(--color-text-primary)', height: '40px' }}
         />
         <button
           onClick={sendMessage}

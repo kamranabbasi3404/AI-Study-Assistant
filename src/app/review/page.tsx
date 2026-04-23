@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Target, BarChart2, Check, CheckCircle, PartyPopper, ClipboardList, Pencil, Lightbulb, Pointer, Frown, Meh, Smile, Star } from 'lucide-react';
 
 interface ReviewItem {
   _id: string;
@@ -86,18 +87,18 @@ export default function ReviewPage() {
       </div>
 
       {reviews.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <span className="text-7xl block mb-4">🎉</span>
+        <div className="glass-card p-12 text-center flex flex-col items-center">
+          <div className="text-[var(--color-accent-primary)] mb-4"><PartyPopper className="w-16 h-16" /></div>
           <h2 className="text-2xl font-bold mb-2">All caught up!</h2>
           <p style={{ color: 'var(--color-text-muted)' }}>
             No cards due for review right now. Take a quiz to add more cards to your review schedule.
           </p>
-          <a href="/quiz" className="btn-primary inline-block mt-6">🎯 Take a Quiz</a>
+          <a href="/quiz" className="btn-primary inline-flex items-center mt-6"><Target className="w-4 h-4 mr-2" /> Take a Quiz</a>
         </div>
       ) : currentIndex < 0 ? (
         // All reviews complete
-        <div className="glass-card p-12 text-center">
-          <span className="text-7xl block mb-4">✅</span>
+        <div className="glass-card p-12 text-center flex flex-col items-center">
+          <CheckCircle className="w-16 h-16 text-[var(--color-success)] mb-4" />
           <h2 className="text-2xl font-bold mb-2">Review Session Complete!</h2>
           <p className="mb-2" style={{ color: 'var(--color-text-secondary)' }}>
             You reviewed <strong>{completed}</strong> cards. Great work!
@@ -105,9 +106,9 @@ export default function ReviewPage() {
           <p className="mb-6" style={{ color: 'var(--color-text-muted)' }}>
             Come back later for more reviews based on the spaced repetition schedule.
           </p>
-          <div className="flex justify-center gap-4">
-            <a href="/" className="btn-primary">📊 Dashboard</a>
-            <a href="/quiz" className="btn-secondary">🎯 Take a Quiz</a>
+          <div className="flex justify-center gap-4 w-full">
+            <a href="/" className="btn-primary inline-flex items-center"><BarChart2 className="w-4 h-4 mr-2" /> Dashboard</a>
+            <a href="/quiz" className="btn-secondary inline-flex items-center"><Target className="w-4 h-4 mr-2" /> Take a Quiz</a>
           </div>
         </div>
       ) : (
@@ -117,8 +118,8 @@ export default function ReviewPage() {
             <span className="text-sm font-mono" style={{ color: 'var(--color-text-muted)' }}>
               {currentIndex + 1} / {reviews.length} cards
             </span>
-            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              ✅ {completed} reviewed
+            <span className="text-sm flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
+              <Check className="w-4 h-4 text-[var(--color-success)]" /> {completed} reviewed
             </span>
           </div>
 
@@ -127,7 +128,7 @@ export default function ReviewPage() {
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${(completed / reviews.length) * 100}%`,
-                background: 'linear-gradient(90deg, #7c3aed, #a855f7)',
+                background: 'linear-gradient(90deg, var(--color-accent-primary), var(--color-accent-secondary))',
               }}
             />
           </div>
@@ -142,14 +143,14 @@ export default function ReviewPage() {
           >
             {!showAnswer ? (
               <div className="text-center">
-                <span className="text-xs px-3 py-1 rounded-lg inline-block mb-6" style={{ background: 'rgba(124,58,237,0.15)', color: 'var(--color-accent-secondary)' }}>
-                  {reviews[currentIndex].question.type === 'mcq' ? '📋 MCQ' : reviews[currentIndex].question.type === 'short_answer' ? '✏️ Short Answer' : '💡 Concept'}
+                <span className="text-xs px-3 py-1 rounded-lg inline-flex items-center gap-1 mb-6" style={{ background: 'rgba(37,99,235,0.15)', color: 'var(--color-accent-primary)' }}>
+                  {reviews[currentIndex].question.type === 'mcq' ? <><ClipboardList className="w-3 h-3" /> MCQ</> : reviews[currentIndex].question.type === 'short_answer' ? <><Pencil className="w-3 h-3" /> Short Answer</> : <><Lightbulb className="w-3 h-3" /> Concept</>}
                 </span>
                 <h2 className="text-xl font-semibold leading-relaxed mb-8">
                   {reviews[currentIndex].question.question}
                 </h2>
-                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                  👆 Tap to reveal answer
+                <p className="text-sm flex items-center justify-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
+                  <Pointer className="w-4 h-4" /> Tap to reveal answer
                 </p>
               </div>
             ) : (
@@ -176,31 +177,31 @@ export default function ReviewPage() {
               <div className="grid grid-cols-4 gap-3">
                 <button
                   onClick={() => rateCard(0)}
-                  className="py-3 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+                  className="py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-1 transition-all hover:scale-105"
                   style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}
                 >
-                  😵 Forgot
+                  <Frown className="w-4 h-4" /> Forgot
                 </button>
                 <button
                   onClick={() => rateCard(2)}
-                  className="py-3 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+                  className="py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-1 transition-all hover:scale-105"
                   style={{ background: 'rgba(234,179,8,0.15)', color: '#eab308', border: '1px solid rgba(234,179,8,0.3)' }}
                 >
-                  😅 Hard
+                  <Meh className="w-4 h-4" /> Hard
                 </button>
                 <button
                   onClick={() => rateCard(4)}
-                  className="py-3 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+                  className="py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-1 transition-all hover:scale-105"
                   style={{ background: 'rgba(6,182,212,0.15)', color: '#06b6d4', border: '1px solid rgba(6,182,212,0.3)' }}
                 >
-                  🙂 Good
+                  <Smile className="w-4 h-4" /> Good
                 </button>
                 <button
                   onClick={() => rateCard(5)}
-                  className="py-3 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+                  className="py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-1 transition-all hover:scale-105"
                   style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }}
                 >
-                  😎 Easy
+                  <Star className="w-4 h-4" /> Easy
                 </button>
               </div>
             </div>

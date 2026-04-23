@@ -44,7 +44,8 @@ Be concise but educational.`;
 export async function chatWithNotes(
   question: string,
   userId: string,
-  documentId?: string
+  documentId?: string,
+  history?: string
 ): Promise<{ answer: string; sources: string[] }> {
   await connectDB();
 
@@ -67,13 +68,18 @@ export async function chatWithNotes(
 
 CRITICAL RULES:
 1. If the user asks a general knowledge question, a personal question, or ANY question whose answer is NOT found in or cannot be deduced from the provided Study Material, you MUST refuse to answer.
-2. If refusing, use this exact phrase: "I can only answer questions related to your study material. This question is out of bounds."
-3. DO NOT use your general knowledge to fill in gaps.
-4. You ARE ALLOWED to summarize, explain, or categorize the provided material if asked (e.g. explaining which topics are hard/easy based on your analysis of the names).
-5. Reference specific parts of the material in your answer. Be educational and clear.`;
+2. EXCEPTIONS TO RULE 1: If the user is having a meta-conversation (e.g. correcting you, complaining about a wrong PDF, asking what documents you can see, or greeting you), you MUST reply conversationally and acknowledge them without refusing.
+3. If refusing (per Rule 1), use this exact phrase: "I can only answer questions related to your study material. This question is out of bounds."
+4. DO NOT use your general knowledge to fill in gaps about academic subjects.
+5. You ARE ALLOWED to summarize, explain, or categorize the provided material if asked.
+6. Reference specific parts of the material in your answer. Be educational and clear.
+7. CRITICAL: If the student asks a follow-up question (like "translate this", "explain more", or uses pronouns like "this/it"), use the Chat History to understand the context. You may translate or summarize your PREVIOUS answers from the history even if the retrieved Study Material chunks seem irrelevant.`;
 
   const userPrompt = `Study Material:
 ${topicsContext}${context}
+
+Chat History (Last few messages):
+${history || 'No previous history.'}
 
 Student's Question: ${question}`;
 

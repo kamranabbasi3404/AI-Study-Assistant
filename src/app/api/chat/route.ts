@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       }).populate('questionId').limit(5).lean();
 
       if (pendingReviews.length === 0) {
-        return sendAssistantMessage({ type: 'chat', answer: 'You have no pending reviews at the moment! Great job staying on top of your studies. 🎯', sources: [] });
+        return sendAssistantMessage({ type: 'chat', answer: 'You have no pending reviews at the moment! Great job staying on top of your studies.', sources: [] });
       }
 
       const questions = pendingReviews.map((r: any) => ({
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         type: r.questionId.type
       }));
 
-      return sendAssistantMessage({ type: 'quiz', questions, message: "Here is your daily review! Let's reinforce your memory. 🧠" });
+      return sendAssistantMessage({ type: 'quiz', questions, message: "Here is your daily review! Let's reinforce your memory." });
     }
 
     if (isQuizRequest) {
@@ -111,7 +111,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const result = await chatWithNotes(question, userId, documentId);
+    // Fetch recent history to provide context for follow-up questions like "translate to roman english"
+    const previousMessages = await ChatMessage.find({ sessionId }).sort({ createdAt: -1 }).limit(6).lean();
+    const historyText = previousMessages.reverse().map((m: any) => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.content}`).join('\n\n');
+
+    const result = await chatWithNotes(question, userId, documentId, historyText);
     return sendAssistantMessage({ type: 'chat', ...result });
   } catch (error: any) {
     console.error('Chat error:', error);

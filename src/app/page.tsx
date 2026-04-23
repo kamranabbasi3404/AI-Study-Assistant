@@ -3,6 +3,7 @@
 import { useUser } from '@clerk/nextjs';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { BookOpen, Target, TrendingUp, Clock, FileText, RotateCcw, MessageSquare } from 'lucide-react';
 
 interface DashboardStats {
   totalDocuments: number;
@@ -66,25 +67,25 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
-          icon="📚" 
+          icon={<BookOpen className="w-8 h-8 text-[var(--color-accent-primary)]" />} 
           label="Documents" 
           value={stats.totalDocuments} 
           subtext="Total study materials"
         />
         <StatCard 
-          icon="🎯" 
+          icon={<Target className="w-8 h-8 text-[var(--color-accent-primary)]" />} 
           label="Questions" 
           value={stats.totalQuestionsAnswered} 
           subtext="Answered this week"
         />
         <StatCard 
-          icon="📈" 
+          icon={<TrendingUp className="w-8 h-8 text-[var(--color-accent-primary)]" />} 
           label="Accuracy" 
           value={`${stats.averageAccuracy}%`} 
           subtext="Mastery level"
         />
         <StatCard 
-          icon="⏱️" 
+          icon={<Clock className="w-8 h-8 text-[var(--color-accent-primary)]" />} 
           label="Study Time" 
           value={`${stats.studyTimeToday}m`} 
           subtext="Time spent today"
@@ -114,8 +115,8 @@ export default function DashboardPage() {
                 stats.recentActivity.map((activity, i) => (
                   <div key={i} className="flex gap-4 group">
                     <div className="flex flex-col items-center">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: 'rgba(124, 58, 237, 0.15)' }}>
-                        {activity.type === 'upload' ? '📄' : activity.type === 'quiz' ? '🎯' : '🔄'}
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: 'rgba(37, 99, 235, 0.15)' }}>
+                        {activity.type === 'upload' ? <FileText className="w-5 h-5 text-[var(--color-accent-primary)]" /> : activity.type === 'quiz' ? <Target className="w-5 h-5 text-[var(--color-accent-primary)]" /> : <RotateCcw className="w-5 h-5 text-[var(--color-accent-primary)]" />}
                       </div>
                       {i !== stats.recentActivity.length - 1 && (
                         <div className="w-0.5 h-full mt-2" style={{ background: 'var(--color-border)' }} />
@@ -173,12 +174,12 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold mb-4">Quick Start</h2>
             <div className="grid grid-cols-2 gap-3">
               <Link href="/chat" className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-colors border border-[var(--color-border)]">
-                <span className="text-2xl mb-2">📄</span>
-                <span className="text-xs font-bold uppercase tracking-wider">Upload Notes</span>
+                <FileText className="w-8 h-8 mb-2 text-[var(--color-text-secondary)]" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Upload Notes</span>
               </Link>
               <Link href="/chat" className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-colors border border-[var(--color-border)]">
-                <span className="text-2xl mb-1">💬</span>
-                <span className="text-xs font-bold uppercase tracking-wider">AI Chat</span>
+                <MessageSquare className="w-8 h-8 mb-2 text-[var(--color-text-secondary)]" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">AI Chat</span>
               </Link>
             </div>
           </div>
@@ -188,10 +189,10 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ icon, label, value, subtext }: { icon: string; label: string; value: string | number; subtext: string }) {
+function StatCard({ icon, label, value, subtext }: { icon: React.ReactNode; label: string; value: string | number; subtext: string }) {
   return (
     <div className="glass-card p-6 flex items-start gap-4 hover:scale-[1.02] transition-transform duration-300">
-      <div className="text-3xl p-3 rounded-2xl" style={{ background: 'rgba(124, 58, 237, 0.1)' }}>
+      <div className="text-3xl p-3 rounded-2xl" style={{ background: 'rgba(37, 99, 235, 0.1)' }}>
         {icon}
       </div>
       <div>

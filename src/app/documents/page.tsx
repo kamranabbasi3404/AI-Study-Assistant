@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { BookOpen, FileText, Trash2, Loader2, BarChart2, Tag, Calendar } from 'lucide-react';
+
 interface Document {
   _id: string;
   title: string;
@@ -79,8 +81,8 @@ export default function DocumentsPage() {
       </div>
 
       {documents.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <span className="text-7xl block mb-4">📚</span>
+        <div className="glass-card p-12 text-center flex flex-col items-center">
+          <div className="text-[var(--color-text-muted)] mb-4"><BookOpen className="w-16 h-16" /></div>
           <h2 className="text-2xl font-bold mb-2">No documents yet</h2>
           <p className="mb-6" style={{ color: 'var(--color-text-muted)' }}>
             Upload your study notes to get started with AI-powered learning.
@@ -99,9 +101,9 @@ export default function DocumentsPage() {
                 <div className="flex items-center gap-3">
                   <span
                     className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-                    style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
+                    style={{ background: 'linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary))' }}
                   >
-                    📄
+                    <FileText className="w-6 h-6 text-white" />
                   </span>
                   <div>
                     <h3 className="font-bold text-sm">{doc.title}</h3>
@@ -117,14 +119,14 @@ export default function DocumentsPage() {
                   style={{ color: 'var(--color-text-muted)' }}
                   title="Delete document"
                 >
-                  {deleting === doc._id ? '⏳' : '🗑️'}
+                  {deleting === doc._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 </button>
               </div>
 
               <div className="flex items-center gap-4 mb-4 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                <span>📊 {doc.chunkCount} chunks</span>
-                <span>🏷️ {doc.topicCount} topics</span>
-                <span>📅 {new Date(doc.createdAt).toLocaleDateString()}</span>
+                <span className="flex items-center gap-1"><BarChart2 className="w-3 h-3" /> {doc.chunkCount} chunks</span>
+                <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> {doc.topicCount} topics</span>
+                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(doc.createdAt).toLocaleDateString()}</span>
               </div>
 
               {/* Topics */}
@@ -134,9 +136,9 @@ export default function DocumentsPage() {
                     key={topic._id}
                     className="text-xs px-3 py-1 rounded-lg transition-all"
                     style={{
-                      background: 'rgba(124, 58, 237, 0.1)',
+                      background: 'rgba(37, 99, 235, 0.1)',
                       color: 'var(--color-accent-secondary)',
-                      border: '1px solid rgba(124, 58, 237, 0.2)',
+                      border: '1px solid rgba(37, 99, 235, 0.2)',
                     }}
                   >
                     {topic.name}
