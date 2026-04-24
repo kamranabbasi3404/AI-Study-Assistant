@@ -87,11 +87,33 @@ export async function POST(request: NextRequest) {
         return sendAssistantMessage({ type: 'chat', answer: 'You need to upload some study notes first before I can generate a quiz!', sources: [] });
       }
 
+      let count = 5;
+      const explicitMatch = question.match(/\b(\d+)\s*(?:questions|mcqs|qs|quiz)\b/i) || 
+                            question.match(/(?:give|make|create|generate).+?\b(\d+)\b/i);
+      
+      let parsedCount = explicitMatch ? parseInt(explicitMatch[1], 10) : 0;
+      if (!parsedCount) {
+        const fallback = question.match(/\b(\d+)\b/);
+        if (fallback) parsedCount = parseInt(fallback[1], 10);
+      }
+      
+      if (parsedCount > 0 && parsedCount <= 30) {
+        count = parsedCount;
+      }
+
+      let types: ('mcq' | 'short_answer' | 'concept')[] | undefined = undefined;
+      if (question.match(/\b(?:mcqs?|multiple choice)\b/i)) {
+        types = ['mcq'];
+      } else if (question.match(/\b(?:short|conceptual|theory)\b/i)) {
+        types = ['short_answer', 'concept'];
+      }
+
       try {
         const generatedQuestions = await generateQuiz({
           topicId: String(recentTopic._id),
           userId,
-          count: 5,
+          count,
+          types,
         });
         
         // Map to format expected by UI

@@ -195,7 +195,7 @@ export default function Sidebar() {
               </p>
               <div className="space-y-1">
                 {sessions.slice(0, 10).map((session) => (
-                  <div key={session._id} className="group relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm hover:bg-[rgba(255,255,255,0.05)] transition-colors">
+                  <div key={session._id} className="group relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm hover:bg-black/5 transition-colors">
                     <span className="opacity-70"><MessageSquare className="w-4 h-4" /></span>
                     {editingId === session._id ? (
                       <input
@@ -204,7 +204,7 @@ export default function Sidebar() {
                         onChange={(e) => setEditTitle(e.target.value)}
                         onBlur={() => handleSaveEdit(session._id)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(session._id)}
-                        className="flex-1 bg-[rgba(0,0,0,0.3)] border border-[var(--color-border)] rounded px-2 py-1 text-white text-sm outline-none"
+                        className="flex-1 bg-white border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-primary)] text-sm outline-none shadow-sm"
                       />
                     ) : (
                       <Link
@@ -212,7 +212,7 @@ export default function Sidebar() {
                         onClick={() => {
                           if (window.innerWidth < 1024) setCollapsed(true);
                         }}
-                        className="flex-1 truncate text-[var(--color-text-secondary)] hover:text-white"
+                        className="flex-1 truncate text-[var(--color-text-secondary)] hover:text-[var(--color-accent-primary)] font-medium"
                       >
                         {session.title}
                       </Link>

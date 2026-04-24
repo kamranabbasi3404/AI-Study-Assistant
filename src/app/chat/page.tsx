@@ -20,9 +20,8 @@ function InlineQuiz({ questions }: { questions: any[] }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  const calculateScore = () => {
-    return questions.reduce((score, q, i) => score + (answers[i] === q.correctAnswer ? 1 : 0), 0);
-  };
+  const [evaluations, setEvaluations] = useState<any[]>([]);
+  const [totalScore, setTotalScore] = useState<number>(0);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -43,6 +42,10 @@ function InlineQuiz({ questions }: { questions: any[] }) {
         });
         
         if (!res.ok) throw new Error('Failed to save progress');
+
+        const data = await res.json();
+        setEvaluations(data.evaluations || []);
+        setTotalScore(data.score || 0);
       }
       
       setShowResults(true);
@@ -56,45 +59,91 @@ function InlineQuiz({ questions }: { questions: any[] }) {
 
   return (
     <div className="mt-4 space-y-6 w-full max-w-full">
-      {questions.map((q, i) => (
-        <div key={i} className="p-4 rounded-xl" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <p className="font-semibold mb-3">{i + 1}. {q.question}</p>
-          <div className="space-y-2">
-            {q.options?.map((opt: string, j: number) => {
-              const isSelected = answers[i] === opt;
-              const isCorrect = opt === q.correctAnswer;
-              
-              let btnStyle = {};
-              if (showResults) {
-                if (isCorrect) btnStyle = { background: 'rgba(34, 197, 94, 0.2)', border: '1px solid var(--color-success)', color: 'var(--color-success)' };
-                else if (isSelected && !isCorrect) btnStyle = { background: 'rgba(239, 68, 68, 0.2)', border: '1px solid var(--color-danger)', color: 'var(--color-danger)' };
-                else btnStyle = { background: 'rgba(255,255,255,0.05)', opacity: 0.5 };
-              } else {
-                if (isSelected) btnStyle = { background: 'rgba(37, 99, 235, 0.2)', border: '1px solid var(--color-accent-primary)' };
-                else btnStyle = { background: 'rgba(255,255,255,0.05)', border: '1px solid transparent' };
-              }
+      {questions.map((q, i) => {
+        const isMCQ = q.options && q.options.length > 0;
+        return (
+          <div key={i} className="p-5 rounded-xl bg-white border border-[var(--color-border)] shadow-sm">
+            <p className="font-semibold mb-4 text-[var(--color-text-primary)]">
+              <span className="text-[var(--color-accent-primary)] mr-2">Q{i + 1}.</span> 
+              {q.question}
+            </p>
+            
+            {isMCQ ? (
+              <div className="space-y-2">
+                {q.options.map((opt: string, j: number) => {
+                  const isSelected = answers[i] === opt;
+                  const isCorrect = opt === q.correctAnswer;
+                  
+                  let btnClass = "w-full text-left p-3 rounded-xl text-sm transition-all border ";
+                  if (showResults) {
+                    if (isCorrect) btnClass += "bg-green-50 border-green-200 text-green-800";
+                    else if (isSelected && !isCorrect) btnClass += "bg-red-50 border-red-200 text-red-800";
+                    else btnClass += "bg-[var(--color-bg-secondary)] border-transparent text-[var(--color-text-muted)] opacity-70";
+                  } else {
+                    if (isSelected) btnClass += "bg-blue-50 border-blue-200 text-blue-800 ring-1 ring-blue-200";
+                    else btnClass += "bg-[var(--color-bg-secondary)] border-transparent hover:bg-gray-100 text-[var(--color-text-secondary)]";
+                  }
 
-              return (
-                <button
-                  key={j}
-                  onClick={() => !showResults && setAnswers(prev => ({ ...prev, [i]: opt }))}
+                  return (
+                    <button
+                      key={j}
+                      onClick={() => !showResults && setAnswers(prev => ({ ...prev, [i]: opt }))}
+                      disabled={showResults}
+                      className={btnClass}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <textarea
+                  value={answers[i] || ''}
+                  onChange={(e) => !showResults && setAnswers(prev => ({ ...prev, [i]: e.target.value }))}
                   disabled={showResults}
-                  className="w-full text-left p-3 rounded-lg text-sm transition-all hover:bg-[rgba(255,255,255,0.1)]"
-                  style={btnStyle}
-                >
-                  {opt}
-                </button>
-              );
-            })}
+                  placeholder="Type your answer here..."
+                  className="w-full p-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm outline-none focus:border-[var(--color-accent-primary)] focus:ring-1 focus:ring-[var(--color-accent-primary)] resize-none transition-all text-[var(--color-text-primary)] disabled:opacity-70"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            {showResults && (
+              <div className="mt-4 space-y-3">
+                {!isMCQ && evaluations.length > 0 && (
+                  (() => {
+                    const evalData = evaluations.find(e => e.questionId === q._id);
+                    if (!evalData) return null;
+                    return (
+                      <div className={`p-4 rounded-xl border ${evalData.score === 1 ? 'bg-green-50 border-green-200' : evalData.score > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex justify-between items-center mb-2">
+                          <p className={`font-semibold text-sm ${evalData.score === 1 ? 'text-green-800' : evalData.score > 0 ? 'text-yellow-800' : 'text-red-800'}`}>AI Evaluation</p>
+                          <span className={`font-bold px-2 py-1 rounded text-xs ${evalData.score === 1 ? 'bg-green-200 text-green-900' : evalData.score > 0 ? 'bg-yellow-200 text-yellow-900' : 'bg-red-200 text-red-900'}`}>
+                            Score: {evalData.score} / 1
+                          </span>
+                        </div>
+                        <p className={`text-sm ${evalData.score === 1 ? 'text-green-800' : evalData.score > 0 ? 'text-yellow-800' : 'text-red-800'}`}>{evalData.feedback}</p>
+                      </div>
+                    )
+                  })()
+                )}
+                <div className="p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm">
+                  <p className="font-semibold text-[var(--color-accent-primary)] mb-1">
+                    {isMCQ ? 'Explanation:' : 'Reference Answer:'}
+                  </p>
+                  {!isMCQ && q.correctAnswer && (
+                    <p className="text-[var(--color-text-primary)] font-medium mb-2">{q.correctAnswer}</p>
+                  )}
+                  {q.explanation && (
+                    <p className="text-[var(--color-text-secondary)] leading-relaxed mt-1">{q.explanation}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          {showResults && (
-            <div className="mt-3 p-3 rounded-lg text-sm" style={{ background: 'rgba(255,255,255,0.05)' }}>
-              <p className="font-semibold text-[var(--color-accent-secondary)]">Explanation:</p>
-              <p className="text-[var(--color-text-secondary)] mt-1">{q.explanation}</p>
-            </div>
-          )}
-        </div>
-      ))}
+        );
+      })}
       
       {!showResults ? (
         <button 
@@ -106,10 +155,10 @@ function InlineQuiz({ questions }: { questions: any[] }) {
           {submitting ? 'Saving Progress...' : 'Submit Answers'}
         </button>
       ) : (
-        <div className="text-center p-4 rounded-xl space-y-2" style={{ background: 'rgba(37, 99, 235, 0.15)' }}>
-          <p className="font-bold text-lg">Score: {calculateScore()} / {questions.length}</p>
-          <p className="text-sm text-[var(--color-success)] flex items-center justify-center gap-1"><Check className="w-4 h-4" /> Progress saved to Review Schedule</p>
-          {submitError && <p className="text-xs text-[var(--color-danger)]">{submitError}</p>}
+        <div className="text-center p-5 rounded-xl space-y-2 bg-blue-50 border border-blue-100">
+          <p className="font-bold text-lg text-blue-900">Total Score: {totalScore} / {questions.length}</p>
+          <p className="text-sm text-green-700 flex items-center justify-center gap-1 font-medium"><CheckCircle className="w-4 h-4" /> Progress saved to Review Schedule</p>
+          {submitError && <p className="text-xs text-red-500">{submitError}</p>}
         </div>
       )}
     </div>
@@ -326,8 +375,8 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col fade-in" style={{ height: 'calc(100vh - 6rem)' }}>
-      <div className="mb-6">
+    <div className="w-full flex flex-col fade-in" style={{ height: 'calc(100vh - 6rem)' }}>
+      <div className="max-w-4xl mx-auto w-full mb-6 px-4 lg:px-8">
         <h1 className="text-3xl font-bold gradient-text">AI Study Chat</h1>
         <p className="mt-1" style={{ color: 'var(--color-text-secondary)' }}>
           Ask questions about your uploaded notes. Answers are grounded in your study material.
@@ -336,10 +385,11 @@ export default function ChatPage() {
 
       {/* Messages */}
       <div
-        className="flex-1 overflow-y-auto space-y-4 pr-2 mb-4"
+        className="flex-1 overflow-y-auto w-full mb-4"
         style={{ maxHeight: 'calc(100vh - 16rem)' }}
       >
-        {messages.length === 0 && (
+        <div className="max-w-4xl mx-auto w-full space-y-4 px-4 lg:px-8">
+          {messages.length === 0 && (
           <div className="text-center py-16">
             <div className="flex justify-center text-[var(--color-text-muted)] mb-4"><MessageSquare className="w-16 h-16" /></div>
             <h2 className="text-xl font-semibold mb-2">Ask anything about your notes</h2>
@@ -428,14 +478,16 @@ export default function ChatPage() {
         )}
 
         <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input */}
-      <div
-        className="flex gap-3 p-4 rounded-2xl items-center"
-        style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
-      >
-        <input 
+      <div className="max-w-4xl mx-auto w-full px-4 lg:px-8">
+        <div
+          className="flex gap-3 p-4 rounded-2xl items-center"
+          style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+        >
+          <input 
           type="file" 
           ref={fileInputRef} 
           className="hidden" 
@@ -470,17 +522,18 @@ export default function ChatPage() {
           className="flex-1 bg-transparent outline-none text-sm resize-none py-2"
           style={{ color: 'var(--color-text-primary)', height: '40px' }}
         />
-        <button
-          onClick={sendMessage}
-          disabled={!input.trim() || loading || uploading}
-          className={`px-6 py-2 rounded-xl font-semibold text-sm transition-all ${
-            !input.trim() || loading || uploading
-              ? 'bg-[rgba(42,42,90,0.3)] text-[var(--color-text-muted)] cursor-not-allowed'
-              : 'btn-primary'
-          }`}
-        >
-          {loading ? '...' : 'Send'}
-        </button>
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() || loading || uploading}
+            className={`px-6 py-2 rounded-xl font-semibold text-sm transition-all ${
+              !input.trim() || loading || uploading
+                ? 'bg-black/5 text-[var(--color-text-muted)] cursor-not-allowed'
+                : 'btn-primary'
+            }`}
+          >
+            {loading ? '...' : 'Send'}
+          </button>
+        </div>
       </div>
     </div>
   );

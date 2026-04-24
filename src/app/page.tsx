@@ -66,28 +66,28 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          icon={<BookOpen className="w-8 h-8 text-[var(--color-accent-primary)]" />} 
-          label="Documents" 
-          value={stats.totalDocuments} 
+        <StatCard
+          icon={<BookOpen className="w-8 h-8 text-[var(--color-accent-primary)]" />}
+          label="Documents"
+          value={stats.totalDocuments}
           subtext="Total study materials"
         />
-        <StatCard 
-          icon={<Target className="w-8 h-8 text-[var(--color-accent-primary)]" />} 
-          label="Questions" 
-          value={stats.totalQuestionsAnswered} 
+        <StatCard
+          icon={<Target className="w-8 h-8 text-[var(--color-accent-primary)]" />}
+          label="Questions"
+          value={stats.totalQuestionsAnswered}
           subtext="Answered this week"
         />
-        <StatCard 
-          icon={<TrendingUp className="w-8 h-8 text-[var(--color-accent-primary)]" />} 
-          label="Accuracy" 
-          value={`${stats.averageAccuracy}%`} 
+        <StatCard
+          icon={<TrendingUp className="w-8 h-8 text-[var(--color-accent-primary)]" />}
+          label="Accuracy"
+          value={`${stats.averageAccuracy}%`}
           subtext="Mastery level"
         />
-        <StatCard 
-          icon={<Clock className="w-8 h-8 text-[var(--color-accent-primary)]" />} 
-          label="Study Time" 
-          value={`${stats.studyTimeToday}m`} 
+        <StatCard
+          icon={<Clock className="w-8 h-8 text-[var(--color-accent-primary)]" />}
+          label="Study Time"
+          value={`${stats.studyTimeToday}m`}
           subtext="Time spent today"
         />
       </div>
@@ -102,7 +102,7 @@ export default function DashboardPage() {
                 View All
               </Link>
             </div>
-            
+
             <div className="space-y-6">
               {stats.recentActivity.length === 0 ? (
                 <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
@@ -148,16 +148,16 @@ export default function DashboardPage() {
                   <div key={i} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium truncate max-w-[150px]">{topic.name}</span>
-                      <span className="font-bold" style={{ 
+                      <span className="font-bold" style={{
                         color: topic.strength >= 80 ? 'var(--color-success)' : topic.strength >= 50 ? 'var(--color-accent-primary)' : 'var(--color-danger)'
                       }}>
                         {topic.strength}%
                       </span>
                     </div>
                     <div className="w-full h-1.5 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full rounded-full transition-all duration-1000"
-                        style={{ 
+                        style={{
                           width: `${topic.strength}%`,
                           background: topic.strength >= 80 ? 'var(--color-success)' : topic.strength >= 50 ? 'var(--color-accent-primary)' : 'var(--color-danger)'
                         }}
