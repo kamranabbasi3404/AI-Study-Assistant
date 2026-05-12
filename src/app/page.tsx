@@ -37,7 +37,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    
+
     if (!isSignedIn) {
       setLoading(false);
       return;
@@ -57,9 +57,9 @@ export default function DashboardPage() {
           const unlockedBadgeIds = data.badges.filter((b: any) => b.unlocked).map((b: any) => b.id);
           const savedBadgesStr = localStorage.getItem('unlockedBadges');
           const savedBadges = savedBadgesStr ? JSON.parse(savedBadgesStr) : [];
-          
+
           const newlyUnlocked = data.badges.find((b: any) => b.unlocked && !savedBadges.includes(b.id));
-          
+
           if (newlyUnlocked) {
             setNewBadge(newlyUnlocked);
             localStorage.setItem('unlockedBadges', JSON.stringify([...new Set([...savedBadges, ...unlockedBadgeIds])]));
@@ -90,8 +90,8 @@ export default function DashboardPage() {
     <div className="space-y-10 fade-in pb-10">
       {/* Welcome Section */}
       <section className="relative p-8 rounded-3xl overflow-hidden glass-card border-[var(--color-border)] shadow-sm">
-        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-rose-200/40 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-[var(--welcome-glow-1)] rounded-full blur-3xl transition-colors" />
+        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-[var(--welcome-glow-2)] rounded-full blur-3xl transition-colors" />
         <div className="relative z-10">
           <h1 className="text-4xl md:text-5xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 via-orange-400 to-amber-500">
             Welcome back, {user?.firstName || 'Student'}! 👋
@@ -184,14 +184,14 @@ export default function DashboardPage() {
             <div className="bg-gradient-to-br from-rose-500/5 to-orange-500/5 rounded-2xl p-6 h-full border border-[var(--color-border)]">
               <h2 className="text-xl font-bold mb-6" style={{ color: 'var(--color-text-primary)' }}>Quick Actions</h2>
               <div className="grid grid-cols-2 gap-4">
-                <Link href="/chat" className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white hover:bg-rose-50/50 transition-all border border-[var(--color-border)] hover:border-rose-200 hover:shadow-[0_8px_30px_rgba(244,63,94,0.06)] group shadow-sm">
-                  <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform border border-rose-100">
+                <Link href="/chat" className="flex flex-col items-center justify-center p-6 rounded-2xl bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-all border border-[var(--color-border)] hover:border-rose-500/30 group shadow-sm">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
                     <FileText className="w-6 h-6 text-rose-500" />
                   </div>
                   <span className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>Upload</span>
                 </Link>
-                <Link href="/chat" className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white hover:bg-orange-50/50 transition-all border border-[var(--color-border)] hover:border-orange-200 hover:shadow-[0_8px_30px_rgba(249,115,22,0.06)] group shadow-sm">
-                  <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform border border-orange-100">
+                <Link href="/chat" className="flex flex-col items-center justify-center p-6 rounded-2xl bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-all border border-[var(--color-border)] hover:border-orange-500/30 group shadow-sm">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
                     <MessageSquare className="w-6 h-6 text-orange-500" />
                   </div>
                   <span className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>Chat</span>
@@ -247,13 +247,12 @@ export default function DashboardPage() {
             </h2>
             <div className="grid grid-cols-3 gap-3">
               {stats.badges?.map((badge) => (
-                <div 
-                  key={badge.id} 
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
-                    badge.unlocked 
-                      ? 'bg-amber-50/50 border-amber-200 shadow-sm hover:scale-105 cursor-default' 
-                      : 'bg-slate-50 border-slate-200 opacity-50 grayscale cursor-not-allowed'
-                  }`}
+                <div
+                  key={badge.id}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-card)] text-center transition-all ${badge.unlocked
+                      ? 'shadow-sm hover:scale-105 cursor-default hover:border-[var(--color-accent-secondary)]'
+                      : 'opacity-40 grayscale cursor-not-allowed'
+                    }`}
                   title={badge.desc}
                 >
                   <div className="text-3xl mb-2">{badge.icon}</div>
@@ -275,7 +274,7 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500">Badge Unlocked!</h2>
             <p className="text-lg font-bold text-[var(--color-text-primary)] mb-1">{newBadge.name}</p>
             <p className="text-sm text-[var(--color-text-secondary)] mb-8">{newBadge.desc}</p>
-            <button 
+            <button
               onClick={() => setNewBadge(null)}
               className="btn-primary w-full py-3 shadow-[0_8px_30px_rgba(244,63,94,0.2)] hover:shadow-[0_8px_30px_rgba(244,63,94,0.4)]"
             >

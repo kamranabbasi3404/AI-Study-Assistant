@@ -106,26 +106,19 @@ export async function generateCompletion(
         e.message?.includes('rate_limit') ||
         e.message?.includes('429');
 
-      if (isRateLimit && attempt < maxRetries - 1) {
-        attempt++;
-        const waitTime = attempt * 3000;
-
-        if (waitTime > 15000) {
-          throw new Error(
-            `RATE_LIMIT_FAST_FAIL: Groq quota exceeded. Please wait ${Math.ceil(waitTime / 1000)} seconds before trying again.`
-          );
-        }
-
-        console.warn(
-          `Groq API rate limit. Retrying in ${waitTime}ms... (Attempt ${attempt}/${maxRetries - 1})`
+      if (isRateLimit) {
+        const groqMsg = e.error?.error?.message || e.message || '';
+        const timeMatch = groqMsg.match(/Please try again in ([0-9.a-zms]+)/i);
+        const timeStr = timeMatch ? timeMatch[1] : 'a few seconds';
+        
+        throw new Error(
+          `RATE_LIMIT_FAST_FAIL: Model limit reached. Please try again in ${timeStr}.`
         );
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-        continue;
       }
 
       console.error('Groq Completion failed:', e);
       throw new Error(e.message || 'Groq completion failed');
     }
   }
-  throw new Error('Failed after multiple retries due to rate limiting');
+  throw new Error('Failed after multiple retries');
 }

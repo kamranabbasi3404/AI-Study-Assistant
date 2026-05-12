@@ -3,6 +3,8 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { ClerkProvider } from "@clerk/nextjs";
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export const metadata: Metadata = {
   title: "StudyAI - Adaptive Learning Assistant",
   description: "AI-powered study assistant with RAG, spaced repetition, adaptive quizzes, and weak area detection. Transform your notes into active learning.",
@@ -16,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <head>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -26,15 +28,17 @@ export default function RootLayout({
           />
         </head>
         <body className="antialiased">
-          <div className="min-h-screen">
-            <Sidebar />
-            <main
-              className="transition-all duration-300 lg:ml-64 p-6 lg:p-8"
-              style={{ paddingTop: '2rem' }}
-            >
-              {children}
-            </main>
-          </div>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+            <div className="min-h-screen">
+              <Sidebar />
+              <main
+                className="transition-all duration-300 lg:ml-64 p-6 lg:p-8"
+                style={{ paddingTop: '2rem' }}
+              >
+                {children}
+              </main>
+            </div>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

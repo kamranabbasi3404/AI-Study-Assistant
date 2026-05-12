@@ -5,8 +5,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { UserButton, SignInButton, useAuth } from "@clerk/nextjs";
 import ConfirmDialog from './ConfirmDialog';
+import { useTheme } from 'next-themes';
 
-import { BarChart2, BookOpen, RotateCcw, Sparkles, MessageSquare, Pencil, Trash2, User } from 'lucide-react';
+import { BarChart2, BookOpen, RotateCcw, Sparkles, MessageSquare, Pencil, Trash2, User, Moon, Sun } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: <BarChart2 className="w-5 h-5" /> },
@@ -28,6 +29,10 @@ export default function Sidebar() {
   const [editTitle, setEditTitle] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const { isSignedIn } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (isSignedIn) {
@@ -248,8 +253,22 @@ export default function Sidebar() {
           )}
         </nav>
 
-        {/* User Profile */}
+        {/* User Profile & Theme Toggle */}
         <div className="p-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className={`w-full flex items-center gap-3 px-4 py-3 mb-2 rounded-xl text-sm font-medium transition-all ${
+                theme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-amber-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              } ${collapsed ? 'justify-center' : ''}`}
+            >
+              <span className="flex items-center justify-center">
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </span>
+              {!collapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
+            </button>
+          )}
+
           {isSignedIn ? (
             <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : 'px-2'}`}>
               <UserButton />
