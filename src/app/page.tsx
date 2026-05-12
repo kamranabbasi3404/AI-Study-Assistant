@@ -20,12 +20,20 @@ interface DashboardStats {
     name: string;
     strength: number; // 0-100
   }[];
+  badges: {
+    id: string;
+    name: string;
+    icon: string;
+    desc: string;
+    unlocked: boolean;
+  }[];
 }
 
 export default function DashboardPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [newBadge, setNewBadge] = useState<any | null>(null);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -43,6 +51,22 @@ export default function DashboardPage() {
         }
         const data = await res.json();
         setStats(data);
+
+        // Check for newly unlocked badges
+        if (data.badges) {
+          const unlockedBadgeIds = data.badges.filter((b: any) => b.unlocked).map((b: any) => b.id);
+          const savedBadgesStr = localStorage.getItem('unlockedBadges');
+          const savedBadges = savedBadgesStr ? JSON.parse(savedBadgesStr) : [];
+          
+          const newlyUnlocked = data.badges.find((b: any) => b.unlocked && !savedBadges.includes(b.id));
+          
+          if (newlyUnlocked) {
+            setNewBadge(newlyUnlocked);
+            localStorage.setItem('unlockedBadges', JSON.stringify([...new Set([...savedBadges, ...unlockedBadgeIds])]));
+          } else {
+            localStorage.setItem('unlockedBadges', JSON.stringify(unlockedBadgeIds));
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch stats:', error);
       } finally {
@@ -215,8 +239,51 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Badges Section */}
+          <div className="glass-card p-8 shadow-sm">
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+              🏆 Your Badges
+            </h2>
+            <div className="grid grid-cols-3 gap-3">
+              {stats.badges?.map((badge) => (
+                <div 
+                  key={badge.id} 
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
+                    badge.unlocked 
+                      ? 'bg-amber-50/50 border-amber-200 shadow-sm hover:scale-105 cursor-default' 
+                      : 'bg-slate-50 border-slate-200 opacity-50 grayscale cursor-not-allowed'
+                  }`}
+                  title={badge.desc}
+                >
+                  <div className="text-3xl mb-2">{badge.icon}</div>
+                  <span className="text-[10px] font-bold leading-tight" style={{ color: 'var(--color-text-primary)' }}>
+                    {badge.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Badge Unlock Popup */}
+      {newBadge && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl text-center border border-rose-100" style={{ animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+            <div className="text-7xl mb-4 animate-bounce" style={{ filter: 'drop-shadow(0 10px 15px rgba(244,63,94,0.3))' }}>{newBadge.icon}</div>
+            <h2 className="text-2xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500">Badge Unlocked!</h2>
+            <p className="text-lg font-bold text-[var(--color-text-primary)] mb-1">{newBadge.name}</p>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-8">{newBadge.desc}</p>
+            <button 
+              onClick={() => setNewBadge(null)}
+              className="btn-primary w-full py-3 shadow-[0_8px_30px_rgba(244,63,94,0.2)] hover:shadow-[0_8px_30px_rgba(244,63,94,0.4)]"
+            >
+              Awesome!
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
