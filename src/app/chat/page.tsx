@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
-import { BookOpen, Check, Clipboard, MessageSquare, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { BookOpen, Check, Clipboard, MessageSquare, Loader2, CheckCircle, XCircle, Mic, MicOff } from 'lucide-react';
 
 interface Message {
   id?: string;
@@ -227,6 +227,60 @@ export default function ChatPage() {
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false; // Listen for one phrase then stop automatically
+        recognitionRef.current.interimResults = false;
+
+        recognitionRef.current.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript) {
+            setInput((prev) => (prev ? prev + ' ' : '') + transcript);
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          if (event.error === 'no-speech') {
+            // Ignore no-speech errors, it just means the user was quiet
+            setIsListening(false);
+            return;
+          }
+          console.warn('Speech recognition stopped:', event.error);
+          setIsListening(false);
+        };
+
+        recognitionRef.current.onend = () => {
+          setIsListening(false);
+        };
+      }
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        alert('Voice recognition is not supported in this browser.');
+      }
+    }
+  };
 
   // Active study time tracking
   useEffect(() => {
@@ -545,6 +599,14 @@ export default function ChatPage() {
           title="Upload a document"
         >
           +
+        </button>
+
+        <button
+          onClick={toggleListening}
+          className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${isListening ? 'bg-rose-100 text-rose-600 animate-pulse' : 'hover:bg-slate-100 text-slate-500'}`}
+          title={isListening ? "Stop listening" : "Start voice dictation"}
+        >
+          {isListening ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
         </button>
 
         <textarea
