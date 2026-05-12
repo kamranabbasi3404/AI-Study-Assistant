@@ -2,6 +2,7 @@ import connectDB from '@/lib/db';
 import { getStudyStats } from '@/lib/learning/adaptive';
 import { getWeakTopics } from '@/lib/learning/tracker';
 import DocumentModel from '@/lib/models/Document';
+import DailyStudyLog from '@/lib/models/DailyStudyLog';
 
 import { auth } from '@clerk/nextjs/server';
 
@@ -14,10 +15,14 @@ export async function GET() {
 
     await connectDB();
 
-    const [stats, weakTopics, documents] = await Promise.all([
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const [stats, weakTopics, documents, todayLog] = await Promise.all([
       getStudyStats(userId),
       getWeakTopics(userId),
       DocumentModel.find({ userId }).sort({ createdAt: -1 }).limit(5).lean(),
+      DailyStudyLog.findOne({ userId, date: today }).lean(),
     ]);
 
     // Format recent activity
@@ -35,7 +40,7 @@ export async function GET() {
       totalDocuments: documents.length,
       totalQuestionsAnswered: stats.totalAnswered,
       averageAccuracy: stats.accuracy,
-      studyTimeToday: stats.streak * 10, // Mock study time for now
+      studyTimeToday: todayLog ? todayLog.studyTimeMinutes : 0,
       recentActivity,
       topicStrength: weakTopics.map(t => ({
         name: t.topicName,

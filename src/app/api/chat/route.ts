@@ -22,7 +22,18 @@ export async function POST(request: NextRequest) {
     const { default: ChatMessage } = await import('@/lib/models/ChatMessage');
 
     if (!sessionId) {
-      const newSession = await ChatSession.create({ userId, title: question.substring(0, 30) + (question.length > 30 ? '...' : '') });
+      let title = question.substring(0, 30) + (question.length > 30 ? '...' : '');
+      
+      // If discussing a specific document, name the chat after the document
+      if (documentId) {
+        const { default: Document } = await import('@/lib/models/Document');
+        const doc = await Document.findById(documentId);
+        if (doc && doc.name) {
+          title = doc.name;
+        }
+      }
+
+      const newSession = await ChatSession.create({ userId, title });
       sessionId = newSession._id;
     }
 

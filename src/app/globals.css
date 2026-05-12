@@ -2,23 +2,23 @@
 
 @layer base {
   :root {
-    --color-bg-primary: #ffffff;
-    --color-bg-secondary: #f8fafc;
-    --color-bg-card: #ffffff;
-    --color-bg-card-hover: #f8fafc;
-    --color-border: #f1f5f9;
-    --color-text-primary: #1e293b;
-    --color-text-secondary: #475569;
-    --color-text-muted: #94a3b8;
-    --color-accent-primary: #2563eb;
-    --color-accent-secondary: #3b82f6;
-    --color-accent-pink: #60a5fa;
-    --color-accent-cyan: #93c5fd;
-    --color-success: #22c55e;
-    --color-warning: #eab308;
+    --color-bg-primary: #fffaf0; /* Warm cream background */
+    --color-bg-secondary: rgba(255, 255, 255, 0.6);
+    --color-bg-card: rgba(255, 255, 255, 0.75);
+    --color-bg-card-hover: rgba(255, 255, 255, 0.95);
+    --color-border: rgba(244, 63, 94, 0.1); /* Soft rose borders */
+    --color-text-primary: #2d2424; /* Deep warm brown/black */
+    --color-text-secondary: #5c4f4f;
+    --color-text-muted: #8c7e7e;
+    --color-accent-primary: #f43f5e; /* Vibrant Rose */
+    --color-accent-secondary: #f97316; /* Vibrant Orange */
+    --color-accent-pink: #ec4899;
+    --color-accent-cyan: #8b5cf6; /* Reused for purple accents */
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
     --color-danger: #ef4444;
-    --color-strong: #22c55e;
-    --color-medium: #eab308;
+    --color-strong: #10b981;
+    --color-medium: #f59e0b;
     --color-weak: #ef4444;
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
@@ -34,6 +34,11 @@
 
   body {
     background: var(--color-bg-primary);
+    background-image: 
+      radial-gradient(at 10% 20%, rgba(244, 63, 94, 0.05) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, rgba(249, 115, 22, 0.05) 0px, transparent 50%),
+      radial-gradient(at 40% 50%, rgba(236, 72, 153, 0.03) 0px, transparent 50%);
+    background-attachment: fixed;
     color: var(--color-text-primary);
     font-family: var(--font-sans);
     min-height: 100vh;
@@ -61,11 +66,13 @@
 
 @layer components {
   .glass-card {
-    background: var(--color-bg-secondary);
+    background: var(--color-bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--color-border);
     border-radius: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-card:hover {

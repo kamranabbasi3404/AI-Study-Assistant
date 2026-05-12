@@ -73,7 +73,8 @@ CRITICAL RULES:
 4. DO NOT use your general knowledge to fill in gaps about academic subjects.
 5. You ARE ALLOWED to summarize, explain, or categorize the provided material if asked.
 6. Reference specific parts of the material in your answer. Be educational and clear.
-7. CRITICAL: If the student asks a follow-up question (like "translate this", "explain more", or uses pronouns like "this/it"), use the Chat History to understand the context. You may translate or summarize your PREVIOUS answers from the history even if the retrieved Study Material chunks seem irrelevant.`;
+7. CRITICAL: If the student asks a follow-up question (like "translate this", "explain more", or uses pronouns like "this/it"), use the Chat History to understand the context. You may translate or summarize your PREVIOUS answers from the history even if the retrieved Study Material chunks seem irrelevant.
+8. Match the language of the user's query. If the user asks in Roman Urdu or Roman English, you MUST reply in Roman Urdu / Roman English.`;
 
   const userPrompt = `Study Material:
 ${topicsContext}${context}
@@ -81,7 +82,9 @@ ${topicsContext}${context}
 Chat History (Last few messages):
 ${history || 'No previous history.'}
 
-Student's Question: ${question}`;
+Student's Question: ${question}
+
+IMPORTANT INSTRUCTION FOR THIS RESPONSE: Detect the language and script of the Student's Question. If the student asked in Roman Urdu or Roman Hindi (e.g., using words like "ki", "do", "hai", "kya", "batao"), you MUST write your ENTIRE response in Roman Urdu. Do not use English unless quoting the text. Match their language exactly.`;
 
   const answer = await generateCompletion(systemPrompt, userPrompt, 0.5);
   return { answer, sources };

@@ -23,14 +23,24 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const { user } = useUser();
+  const { user, isLoaded, isSignedIn } = useUser();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    
+    if (!isSignedIn) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchStats() {
       try {
         const res = await fetch('/api/stats');
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
         const data = await res.json();
         setStats(data);
       } catch (error) {
@@ -40,7 +50,7 @@ export default function DashboardPage() {
       }
     }
     fetchStats();
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   if (loading) {
     return (
@@ -53,79 +63,88 @@ export default function DashboardPage() {
   if (!stats) return null;
 
   return (
-    <div className="space-y-8 fade-in">
+    <div className="space-y-10 fade-in pb-10">
       {/* Welcome Section */}
-      <section>
-        <h1 className="text-4xl font-bold gradient-text">
-          Welcome back, {user?.firstName || 'Student'}!
-        </h1>
-        <p className="mt-2" style={{ color: 'var(--color-text-secondary)' }}>
-          Here&apos;s your study progress for today. Ready to learn something new?
-        </p>
+      <section className="relative p-8 rounded-3xl overflow-hidden glass-card border-[var(--color-border)] shadow-sm">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-rose-200/40 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-orange-200/40 rounded-full blur-3xl" />
+        <div className="relative z-10">
+          <h1 className="text-4xl md:text-5xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 via-orange-400 to-amber-500">
+            Welcome back, {user?.firstName || 'Student'}! 👋
+          </h1>
+          <p className="text-lg md:text-xl font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            Here&apos;s your learning analytics. Let&apos;s crush your goals today.
+          </p>
+        </div>
       </section>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          icon={<BookOpen className="w-8 h-8 text-[var(--color-accent-primary)]" />}
+          icon={<BookOpen className="w-8 h-8 text-rose-500" />}
           label="Documents"
           value={stats.totalDocuments}
           subtext="Total study materials"
+          color="rgba(244, 63, 94, 0.1)"
         />
         <StatCard
-          icon={<Target className="w-8 h-8 text-[var(--color-accent-primary)]" />}
+          icon={<Target className="w-8 h-8 text-orange-500" />}
           label="Questions"
           value={stats.totalQuestionsAnswered}
           subtext="Answered this week"
+          color="rgba(249, 115, 22, 0.1)"
         />
         <StatCard
-          icon={<TrendingUp className="w-8 h-8 text-[var(--color-accent-primary)]" />}
+          icon={<TrendingUp className="w-8 h-8 text-amber-500" />}
           label="Accuracy"
           value={`${stats.averageAccuracy}%`}
           subtext="Mastery level"
+          color="rgba(245, 158, 11, 0.1)"
         />
         <StatCard
-          icon={<Clock className="w-8 h-8 text-[var(--color-accent-primary)]" />}
+          icon={<Clock className="w-8 h-8 text-emerald-500" />}
           label="Study Time"
           value={`${stats.studyTimeToday}m`}
           subtext="Time spent today"
+          color="rgba(16, 185, 129, 0.1)"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content: Recent Activity */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card p-6 h-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">Recent Activity</h2>
-              <Link href="/documents" className="text-sm font-medium hover:underline" style={{ color: 'var(--color-accent-primary)' }}>
-                View All
+          <div className="glass-card p-8 h-full">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 to-orange-500">Recent Activity</h2>
+              <Link href="/documents" className="text-sm font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--color-accent-primary)' }}>
+                View All →
               </Link>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 relative before:absolute before:inset-y-0 before:left-[19px] before:w-[2px] before:bg-[var(--color-border)] before:z-0">
               {stats.recentActivity.length === 0 ? (
-                <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
-                  <p>No recent activity yet. Start by uploading some notes in the chat!</p>
-                  <Link href="/chat" className="btn-primary mt-4 inline-block">
+                <div className="text-center py-16 px-4 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-border)] relative z-10 shadow-sm">
+                  <p className="text-lg font-medium mb-6" style={{ color: 'var(--color-text-secondary)' }}>No recent activity yet. Start by uploading some notes in the chat!</p>
+                  <Link href="/chat" className="btn-primary inline-block px-8 py-3 text-lg shadow-[0_4px_14px_rgba(244,63,94,0.3)]">
                     Open Chat
                   </Link>
                 </div>
               ) : (
                 stats.recentActivity.map((activity, i) => (
-                  <div key={i} className="flex gap-4 group">
+                  <div key={i} className="flex gap-6 group relative z-10">
                     <div className="flex flex-col items-center">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: 'rgba(37, 99, 235, 0.15)' }}>
-                        {activity.type === 'upload' ? <FileText className="w-5 h-5 text-[var(--color-accent-primary)]" /> : activity.type === 'quiz' ? <Target className="w-5 h-5 text-[var(--color-accent-primary)]" /> : <RotateCcw className="w-5 h-5 text-[var(--color-accent-primary)]" />}
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm ring-4 ring-[var(--color-bg-card)] z-10 bg-rose-50 border border-rose-100 transition-transform group-hover:scale-110">
+                        {activity.type === 'upload' ? <FileText className="w-5 h-5 text-rose-500" /> : activity.type === 'quiz' ? <Target className="w-5 h-5 text-orange-500" /> : <RotateCcw className="w-5 h-5 text-amber-500" />}
                       </div>
-                      {i !== stats.recentActivity.length - 1 && (
-                        <div className="w-0.5 h-full mt-2" style={{ background: 'var(--color-border)' }} />
-                      )}
                     </div>
-                    <div className="pb-6">
-                      <p className="font-bold">{activity.title}</p>
-                      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{activity.description}</p>
-                      <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{activity.timestamp}</p>
+                    <div className="pb-8 flex-1">
+                      <div className="bg-[var(--color-bg-secondary)] p-5 rounded-2xl border border-[var(--color-border)] group-hover:border-rose-200 transition-all shadow-sm group-hover:shadow-[0_4px_20px_rgba(244,63,94,0.05)]">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>{activity.title}</p>
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-500">{activity.timestamp}</span>
+                        </div>
+                        <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>{activity.description}</p>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -134,53 +153,66 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Sidebar: Topic Strength */}
-        <div className="space-y-6">
-          <div className="glass-card p-6">
-            <h2 className="text-xl font-bold mb-6">Topic Strength</h2>
-            <div className="space-y-4">
+        {/* Sidebar: Topic Strength & Actions */}
+        <div className="space-y-8">
+          {/* Quick Actions */}
+          <div className="glass-card p-1 shadow-sm">
+            <div className="bg-gradient-to-br from-rose-500/5 to-orange-500/5 rounded-2xl p-6 h-full border border-[var(--color-border)]">
+              <h2 className="text-xl font-bold mb-6" style={{ color: 'var(--color-text-primary)' }}>Quick Actions</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <Link href="/chat" className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white hover:bg-rose-50/50 transition-all border border-[var(--color-border)] hover:border-rose-200 hover:shadow-[0_8px_30px_rgba(244,63,94,0.06)] group shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform border border-rose-100">
+                    <FileText className="w-6 h-6 text-rose-500" />
+                  </div>
+                  <span className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>Upload</span>
+                </Link>
+                <Link href="/chat" className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white hover:bg-orange-50/50 transition-all border border-[var(--color-border)] hover:border-orange-200 hover:shadow-[0_8px_30px_rgba(249,115,22,0.06)] group shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform border border-orange-100">
+                    <MessageSquare className="w-6 h-6 text-orange-500" />
+                  </div>
+                  <span className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>Chat</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Topic Strength */}
+          <div className="glass-card p-8 shadow-sm">
+            <h2 className="text-xl font-bold mb-8 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+              <Target className="w-5 h-5 text-rose-500" /> Topic Mastery
+            </h2>
+            <div className="space-y-6">
               {stats.topicStrength.length === 0 ? (
-                <p className="text-sm text-center py-4" style={{ color: 'var(--color-text-muted)' }}>
-                  Upload notes and take quizzes to see your topic strengths
-                </p>
+                <div className="text-center py-8 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-border)] shadow-sm">
+                  <p className="text-sm px-4" style={{ color: 'var(--color-text-secondary)' }}>
+                    Upload notes and take quizzes to see your strengths here
+                  </p>
+                </div>
               ) : (
                 stats.topicStrength.slice(0, 5).map((topic, i) => (
-                  <div key={i} className="space-y-1.5">
+                  <div key={i} className="space-y-2 group">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium truncate max-w-[150px]">{topic.name}</span>
-                      <span className="font-bold" style={{
-                        color: topic.strength >= 80 ? 'var(--color-success)' : topic.strength >= 50 ? 'var(--color-accent-primary)' : 'var(--color-danger)'
+                      <span className="font-semibold transition-colors truncate max-w-[180px]" style={{ color: 'var(--color-text-primary)' }}>{topic.name}</span>
+                      <span className="font-bold bg-slate-100 px-2 py-1 rounded-md" style={{
+                        color: topic.strength >= 80 ? 'var(--color-success)' : topic.strength >= 50 ? 'var(--color-warning)' : 'var(--color-danger)'
                       }}>
                         {topic.strength}%
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-[rgba(255,255,255,0.05)] rounded-full overflow-hidden">
+                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-inner">
                       <div
-                        className="h-full rounded-full transition-all duration-1000"
+                        className="h-full rounded-full transition-all duration-1000 relative overflow-hidden"
                         style={{
                           width: `${topic.strength}%`,
-                          background: topic.strength >= 80 ? 'var(--color-success)' : topic.strength >= 50 ? 'var(--color-accent-primary)' : 'var(--color-danger)'
+                          background: topic.strength >= 80 ? 'linear-gradient(90deg, #10b981, #34d399)' : topic.strength >= 50 ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, #ef4444, #f87171)'
                         }}
-                      />
+                      >
+                        <div className="absolute inset-0 bg-white/30 w-full h-full transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out"></div>
+                      </div>
                     </div>
                   </div>
                 ))
               )}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="glass-card p-6 bg-gradient-to-br from-[rgba(124,58,237,0.1)] to-transparent">
-            <h2 className="text-xl font-bold mb-4">Quick Start</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <Link href="/chat" className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-colors border border-[var(--color-border)]">
-                <FileText className="w-8 h-8 mb-2 text-[var(--color-text-secondary)]" />
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Upload Notes</span>
-              </Link>
-              <Link href="/chat" className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-[rgba(255,255,255,0.05)] transition-colors border border-[var(--color-border)]">
-                <MessageSquare className="w-8 h-8 mb-2 text-[var(--color-text-secondary)]" />
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">AI Chat</span>
-              </Link>
             </div>
           </div>
         </div>
@@ -189,17 +221,17 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ icon, label, value, subtext }: { icon: React.ReactNode; label: string; value: string | number; subtext: string }) {
+function StatCard({ icon, label, value, subtext, color }: { icon: React.ReactNode; label: string; value: string | number; subtext: string; color: string }) {
   return (
-    <div className="glass-card p-6 flex items-start gap-4 hover:scale-[1.02] transition-transform duration-300">
-      <div className="text-3xl p-3 rounded-2xl" style={{ background: 'rgba(37, 99, 235, 0.1)' }}>
+    <div className="glass-card p-6 flex items-start gap-4 shadow-sm border border-[var(--color-border)]">
+      <div className="text-3xl p-3 rounded-2xl border border-slate-100 shadow-sm" style={{ background: color }}>
         {icon}
       </div>
-      <div>
-        <p className="text-sm font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--color-text-muted)' }}>
+      <div className="relative z-10">
+        <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--color-text-muted)' }}>
           {label}
         </p>
-        <p className="text-3xl font-black">{value}</p>
+        <p className="text-3xl font-black tracking-tight" style={{ color: 'var(--color-text-primary)' }}>{value}</p>
         <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
           {subtext}
         </p>

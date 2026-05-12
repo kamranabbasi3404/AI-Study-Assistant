@@ -228,6 +228,49 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Active study time tracking
+  useEffect(() => {
+    let lastActive = Date.now();
+    let isActive = true;
+
+    const handleActivity = () => {
+      lastActive = Date.now();
+      isActive = true;
+    };
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+    window.addEventListener('click', handleActivity);
+
+    const intervalId = setInterval(async () => {
+      // If user hasn't interacted for 2 minutes, consider them inactive
+      if (Date.now() - lastActive > 2 * 60 * 1000) {
+        isActive = false;
+      }
+
+      if (isActive) {
+        try {
+          await fetch('/api/stats/study-time', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ minutes: 1 })
+          });
+        } catch (e) {
+          console.error('Failed to log study time');
+        }
+      }
+    }, 60 * 1000); // Check and log every 1 minute
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      clearInterval(intervalId);
+    };
+  }, []);
+
   // Fetch session messages on mount
   useEffect(() => {
     if (sessionId) {
@@ -324,7 +367,7 @@ export default function ChatPage() {
         const sessionRes = await fetch('/api/chat/sessions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: `Upload: ${file.name}` })
+          body: JSON.stringify({ title: file.name })
         });
         const sessionData = await sessionRes.json();
         currentSessionId = sessionData._id;

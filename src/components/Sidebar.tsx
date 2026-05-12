@@ -204,7 +204,7 @@ export default function Sidebar() {
                         onChange={(e) => setEditTitle(e.target.value)}
                         onBlur={() => handleSaveEdit(session._id)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(session._id)}
-                        className="flex-1 bg-white border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-primary)] text-sm outline-none shadow-sm"
+                        className="flex-1 bg-white border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-primary)] text-sm outline-none shadow-sm mr-2"
                       />
                     ) : (
                       <Link
@@ -212,7 +212,7 @@ export default function Sidebar() {
                         onClick={() => {
                           if (window.innerWidth < 1024) setCollapsed(true);
                         }}
-                        className="flex-1 truncate text-[var(--color-text-secondary)] hover:text-[var(--color-accent-primary)] font-medium"
+                        className="flex-1 truncate pr-14 text-[var(--color-text-secondary)] hover:text-[var(--color-accent-primary)] font-medium"
                       >
                         {session.title}
                       </Link>
@@ -220,7 +220,7 @@ export default function Sidebar() {
                     
                     {/* Hover Actions */}
                     {!editingId && (
-                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity absolute right-2 bg-[var(--color-bg-secondary)] px-1 rounded">
+                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity absolute right-3">
                         <button 
                           onClick={(e) => {
                             e.preventDefault();

@@ -1,179 +1,131 @@
+import Groq from 'groq-sdk';
+
+function getGroqClient() {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error('GROQ_API_KEY is not set');
+  return new Groq({ apiKey });
+}
+
+/**
+ * Generate a text embedding using a local TF-IDF approach.
+ * Groq does not provide an embeddings API, so we compute lightweight
+ * deterministic embeddings locally. The vectors are consistent across
+ * calls so cosine-similarity search still works for RAG.
+ */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const maxRetries = 3;
-  let attempt = 0;
-
-  while (attempt < maxRetries) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            content: { parts: [{ text }] },
-            outputDimensionality: 768
-          }),
-        }
-      );
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        const errorMsg = data.error?.message || 'Embedding failed';
-        if (response.status === 429) {
-          throw new Error('RATE_LIMIT: ' + errorMsg);
-        }
-        throw new Error(errorMsg);
-      }
-      
-      return data.embedding.values;
-    } catch (e: any) {
-      if (e.message.includes('RATE_LIMIT') && attempt < maxRetries - 1) {
-        attempt++;
-        // If it tells us to wait X seconds, we can try to extract it, or just use backoff
-        // "Please retry in 22.895268834s."
-        const match = e.message.match(/retry in ([\d\.]+)s/);
-        let waitTime = attempt * 5000; // default 5s, 10s
-        if (match && match[1]) {
-          waitTime = Math.ceil(parseFloat(match[1])) * 1000 + 1000; // add 1s buffer
-        }
-        
-        console.warn(`Gemini API rate limit. Retrying in ${waitTime}ms... (Attempt ${attempt}/${maxRetries - 1})`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        continue;
-      }
-      console.error('REST Embedding failed:', e);
-      return new Array(768).fill(0);
-    }
-  }
-  return new Array(768).fill(0);
+  return computeLocalEmbedding(text);
 }
 
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const maxRetries = 3;
-  const allEmbeddings: number[][] = [];
-  const BATCH_SIZE = 100;
+  return texts.map((t) => computeLocalEmbedding(t));
+}
 
-  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-    const batchTexts = texts.slice(i, i + BATCH_SIZE);
-    let attempt = 0;
+/**
+ * Deterministic local embedding using character-level n-gram hashing.
+ * Produces a 768-dimensional vector for compatibility with existing DB schema.
+ */
+function computeLocalEmbedding(text: string): number[] {
+  const DIMS = 768;
+  const vec = new Float64Array(DIMS);
 
-    while (attempt < maxRetries) {
-      try {
-        const requests = batchTexts.map(text => ({
-          model: 'models/gemini-embedding-2',
-          content: { parts: [{ text }] },
-          outputDimensionality: 768
-        }));
+  // Normalise input
+  const normalised = text.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+  const words = normalised.split(/\s+/).filter(Boolean);
 
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:batchEmbedContents?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requests }),
-          }
-        );
+  // Hash each word and its bigrams into the vector
+  for (const word of words) {
+    // Unigram hash
+    const h = simpleHash(word);
+    vec[Math.abs(h) % DIMS] += 1;
 
-        const data = await response.json();
-        
-        if (!response.ok) {
-          const errorMsg = data.error?.message || 'Batch Embedding failed';
-          if (response.status === 429) {
-            throw new Error('RATE_LIMIT: ' + errorMsg);
-          }
-          throw new Error(errorMsg);
-        }
-        
-        const batchEmbeddings = data.embeddings.map((e: any) => e.values);
-        allEmbeddings.push(...batchEmbeddings);
-        break; // Success, break the retry loop
-      } catch (e: any) {
-        if (e.message.includes('RATE_LIMIT') && attempt < maxRetries - 1) {
-          attempt++;
-          const match = e.message.match(/retry in ([\d\.]+)s/);
-          let waitTime = attempt * 5000;
-          if (match && match[1]) {
-            waitTime = Math.ceil(parseFloat(match[1])) * 1000 + 1000;
-          }
-          console.warn(`Gemini API rate limit on batch. Retrying in ${waitTime}ms... (Attempt ${attempt}/${maxRetries - 1})`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-          continue;
-        }
-        console.error('REST Batch Embedding failed:', e);
-        // Fill failures with zeros
-        for (let j = 0; j < batchTexts.length; j++) {
-          allEmbeddings.push(new Array(768).fill(0));
-        }
-        break;
-      }
+    // Character trigrams for better granularity
+    for (let i = 0; i <= word.length - 3; i++) {
+      const trigram = word.substring(i, i + 3);
+      const th = simpleHash(trigram);
+      vec[Math.abs(th) % DIMS] += 0.5;
     }
   }
 
-  return allEmbeddings;
+  // Word bigrams
+  for (let i = 0; i < words.length - 1; i++) {
+    const bigram = words[i] + ' ' + words[i + 1];
+    const bh = simpleHash(bigram);
+    vec[Math.abs(bh) % DIMS] += 0.7;
+  }
+
+  // L2 normalise
+  let norm = 0;
+  for (let i = 0; i < DIMS; i++) norm += vec[i] * vec[i];
+  norm = Math.sqrt(norm) || 1;
+  const result: number[] = new Array(DIMS);
+  for (let i = 0; i < DIMS; i++) result[i] = vec[i] / norm;
+
+  return result;
 }
+
+function simpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash + char) | 0;
+  }
+  return hash;
+}
+
+/**
+ * Generate a chat completion using Groq (llama-3.3-70b-versatile).
+ * Drop-in replacement for the old Gemini generateCompletion.
+ */
 export async function generateCompletion(
   systemPrompt: string,
   userPrompt: string,
   temperature: number = 0.7
 ): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const groq = getGroqClient();
   const maxRetries = 3;
   let attempt = 0;
 
   while (attempt < maxRetries) {
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ parts: [{ text: userPrompt }] }],
-            generationConfig: { temperature, maxOutputTokens: 4096 },
-          }),
-        }
-      );
+      const chatCompletion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature,
+        max_tokens: 4096,
+      });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        const errorMsg = data.error?.message || 'Completion failed';
-        if (errorMsg.includes('high demand') || response.status === 503 || response.status === 429) {
-          throw new Error('HIGH_DEMAND: ' + errorMsg);
-        }
-        throw new Error(errorMsg);
-      }
-      
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error('Empty response from Gemini');
+      const text = chatCompletion.choices?.[0]?.message?.content;
+      if (!text) throw new Error('Empty response from Groq');
       return text;
     } catch (e: any) {
-      if (e.message.includes('HIGH_DEMAND') && attempt < maxRetries - 1) {
+      const isRateLimit =
+        e.status === 429 ||
+        e.message?.includes('rate_limit') ||
+        e.message?.includes('429');
+
+      if (isRateLimit && attempt < maxRetries - 1) {
         attempt++;
-        
-        // Check if API tells us exactly how long to wait
-        const match = e.message.match(/retry in ([\d\.]+)s/);
-        let waitTime = attempt * 2000; // default 2s, 4s
-        if (match && match[1]) {
-          waitTime = Math.ceil(parseFloat(match[1])) * 1000 + 1000; // Add 1s buffer
+        const waitTime = attempt * 3000;
+
+        if (waitTime > 15000) {
+          throw new Error(
+            `RATE_LIMIT_FAST_FAIL: Groq quota exceeded. Please wait ${Math.ceil(waitTime / 1000)} seconds before trying again.`
+          );
         }
 
-        // Fast fail if wait time is too long (over 10s)
-        if (waitTime > 10000) {
-          throw new Error(`RATE_LIMIT_FAST_FAIL: Gemini quota exceeded. Please wait ${Math.ceil(waitTime / 1000)} seconds before trying again.`);
-        }
-
-        console.warn(`Gemini API high demand. Retrying in ${waitTime}ms... (Attempt ${attempt}/${maxRetries - 1})`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        console.warn(
+          `Groq API rate limit. Retrying in ${waitTime}ms... (Attempt ${attempt}/${maxRetries - 1})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
         continue;
       }
-      console.error('REST Completion failed:', e);
-      throw new Error(e.message.replace('HIGH_DEMAND: ', ''));
+
+      console.error('Groq Completion failed:', e);
+      throw new Error(e.message || 'Groq completion failed');
     }
   }
-  throw new Error('Failed after multiple retries due to high demand');
+  throw new Error('Failed after multiple retries due to rate limiting');
 }
