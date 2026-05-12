@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { ClerkProvider } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { ThemeProvider } from "../components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "StudyAI - Adaptive Learning Assistant",
@@ -11,11 +12,12 @@ export const metadata: Metadata = {
   keywords: "AI study assistant, spaced repetition, adaptive learning, quiz generator, RAG",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { userId } = await auth();
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
@@ -30,10 +32,10 @@ export default function RootLayout({
         <body className="antialiased">
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <div className="min-h-screen">
-              <Sidebar />
+              {userId && <Sidebar />}
               <main
-                className="transition-all duration-300 lg:ml-64 p-6 lg:p-8"
-                style={{ paddingTop: '2rem' }}
+                className={`transition-all duration-300 ${userId ? 'lg:ml-64 p-6 lg:p-8' : 'w-full min-h-screen'}`}
+                style={userId ? { paddingTop: '2rem' } : {}}
               >
                 {children}
               </main>

@@ -109,7 +109,14 @@ export async function generateCompletion(
       if (isRateLimit) {
         const groqMsg = e.error?.error?.message || e.message || '';
         const timeMatch = groqMsg.match(/Please try again in ([0-9.a-zms]+)/i);
-        const timeStr = timeMatch ? timeMatch[1] : 'a few seconds';
+        let timeStr = timeMatch ? timeMatch[1] : 'a few seconds';
+        
+        // Clean up the time string: remove seconds if minutes/hours exist
+        if (timeStr.includes('m') || timeStr.includes('h')) {
+          timeStr = timeStr.replace(/[0-9.]+s/i, '');
+        } else if (timeStr.includes('s')) {
+          timeStr = 'less than a minute';
+        }
         
         throw new Error(
           `RATE_LIMIT_FAST_FAIL: Model limit reached. Please try again in ${timeStr}.`

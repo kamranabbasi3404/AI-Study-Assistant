@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
-import { BookOpen, Check, Clipboard, MessageSquare, Loader2, CheckCircle, XCircle, Mic, MicOff } from 'lucide-react';
+import { BookOpen, Check, Clipboard, MessageSquare, Loader2, CheckCircle, XCircle, Mic, MicOff, ArrowUp } from 'lucide-react';
 
 interface Message {
   id?: string;
@@ -62,7 +62,7 @@ function InlineQuiz({ questions }: { questions: any[] }) {
       {questions.map((q, i) => {
         const isMCQ = q.options && q.options.length > 0;
         return (
-          <div key={i} className="p-5 rounded-xl bg-white border border-[var(--color-border)] shadow-sm">
+          <div key={i} className="p-5 rounded-xl bg-[var(--color-bg-card)] border border-[var(--color-border)] shadow-sm">
             <p className="font-semibold mb-4 text-[var(--color-text-primary)]">
               <span className="text-[var(--color-accent-primary)] mr-2">Q{i + 1}.</span> 
               {q.question}
@@ -74,14 +74,14 @@ function InlineQuiz({ questions }: { questions: any[] }) {
                   const isSelected = answers[i] === opt;
                   const isCorrect = opt === q.correctAnswer;
                   
-                  let btnClass = "w-full text-left p-3 rounded-xl text-sm transition-all border ";
+                  let btnClass = `w-full text-left p-3 rounded-xl text-sm transition-all border ${!showResults ? 'cursor-pointer' : 'cursor-default'} `;
                   if (showResults) {
-                    if (isCorrect) btnClass += "bg-green-50 border-green-200 text-green-800";
-                    else if (isSelected && !isCorrect) btnClass += "bg-red-50 border-red-200 text-red-800";
+                    if (isCorrect) btnClass += "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200";
+                    else if (isSelected && !isCorrect) btnClass += "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200";
                     else btnClass += "bg-[var(--color-bg-secondary)] border-transparent text-[var(--color-text-muted)] opacity-70";
                   } else {
-                    if (isSelected) btnClass += "bg-blue-50 border-blue-200 text-blue-800 ring-1 ring-blue-200";
-                    else btnClass += "bg-[var(--color-bg-secondary)] border-transparent hover:bg-gray-100 text-[var(--color-text-secondary)]";
+                    if (isSelected) btnClass += "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-700";
+                    else btnClass += "bg-[var(--color-bg-secondary)] border-transparent hover:bg-black/5 dark:hover:bg-white/5 text-[var(--color-text-secondary)]";
                   }
 
                   return (
@@ -155,9 +155,9 @@ function InlineQuiz({ questions }: { questions: any[] }) {
           {submitting ? 'Saving Progress...' : 'Submit Answers'}
         </button>
       ) : (
-        <div className="text-center p-5 rounded-xl space-y-2 bg-blue-50 border border-blue-100">
-          <p className="font-bold text-lg text-blue-900">Total Score: {totalScore} / {questions.length}</p>
-          <p className="text-sm text-green-700 flex items-center justify-center gap-1 font-medium"><CheckCircle className="w-4 h-4" /> Progress saved to Review Schedule</p>
+        <div className="text-center p-5 rounded-xl space-y-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50">
+          <p className="font-bold text-lg text-blue-900 dark:text-blue-200">Total Score: {totalScore} / {questions.length}</p>
+          <p className="text-sm text-green-700 dark:text-green-400 flex items-center justify-center gap-1 font-medium"><CheckCircle className="w-4 h-4" /> Progress saved to Review Schedule</p>
           {submitError && <p className="text-xs text-red-500">{submitError}</p>}
         </div>
       )}
@@ -522,41 +522,43 @@ export default function ChatPage() {
             key={i}
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`max-w-[80%] p-4 rounded-2xl relative group ${
-                msg.role === 'user' ? 'rounded-br-md' : 'rounded-bl-md'
-              }`}
-              style={{
-                background:
-                  msg.role === 'user'
-                    ? 'linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary))'
-                    : 'var(--color-bg-card)',
-                color: msg.role === 'user' ? 'white' : 'var(--color-text-primary)',
-                border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
-              }}
-            >
+            <div className="flex flex-col group max-w-[80%]">
+              <div
+                className={`p-4 rounded-2xl relative ${
+                  msg.role === 'user' ? 'rounded-br-md' : 'rounded-bl-md'
+                }`}
+                style={{
+                  background:
+                    msg.role === 'user'
+                      ? 'linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary))'
+                      : 'var(--color-bg-card)',
+                  color: msg.role === 'user' ? 'white' : 'var(--color-text-primary)',
+                  border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
+                }}
+              >
+                {msg.role === 'assistant' ? (
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap markdown-content">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                )}
+
+                {/* Inline Quiz */}
+                {msg.type === 'quiz' && msg.quizData && (
+                  <InlineQuiz questions={msg.quizData} />
+                )}
+
+                {/* Sources */}
+                {msg.sources && msg.sources.length > 0 && (
+                  <MessageSources sources={msg.sources} />
+                )}
+              </div>
+
               {msg.role === 'assistant' && (
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="mt-1.5 ml-2 flex justify-start opacity-0 group-hover:opacity-100 transition-opacity">
                   <CopyButton text={msg.content} />
                 </div>
-              )}
-              
-              {msg.role === 'assistant' ? (
-                <div className="text-sm leading-relaxed whitespace-pre-wrap markdown-content">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
-              ) : (
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-              )}
-
-              {/* Inline Quiz */}
-              {msg.type === 'quiz' && msg.quizData && (
-                <InlineQuiz questions={msg.quizData} />
-              )}
-
-              {/* Sources */}
-              {msg.sources && msg.sources.length > 0 && (
-                <MessageSources sources={msg.sources} />
               )}
             </div>
           </div>
@@ -594,19 +596,11 @@ export default function ChatPage() {
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading || loading}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.05)] transition-colors text-xl"
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.05)] transition-colors text-2xl font-light"
           style={{ color: 'var(--color-text-secondary)' }}
           title="Upload a document"
         >
           +
-        </button>
-
-        <button
-          onClick={toggleListening}
-          className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${isListening ? 'bg-rose-100 text-rose-600 animate-pulse' : 'hover:bg-slate-100 text-slate-500'}`}
-          title={isListening ? "Stop listening" : "Start voice dictation"}
-        >
-          {isListening ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
         </button>
 
         <textarea
@@ -624,20 +618,31 @@ export default function ChatPage() {
             target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
           }}
           placeholder="Ask anything or generate a quiz..."
-          className="flex-1 bg-transparent outline-none text-sm resize-none py-2"
+          className="flex-1 bg-transparent outline-none text-sm resize-none py-2 px-2"
           style={{ color: 'var(--color-text-primary)', height: '40px' }}
         />
+
+        <div className="flex items-center gap-2 pr-1">
+          <button
+            onClick={toggleListening}
+            className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${isListening ? 'bg-rose-100 text-rose-600 animate-pulse' : 'hover:bg-black/5 text-gray-500'}`}
+            title={isListening ? "Stop listening" : "Start voice dictation"}
+          >
+            <Mic className="w-5 h-5" />
+          </button>
+
           <button
             onClick={sendMessage}
             disabled={!input.trim() || loading || uploading}
-            className={`px-6 py-2 rounded-xl font-semibold text-sm transition-all ${
+            className={`w-9 h-9 flex items-center justify-center rounded-full transition-all ${
               !input.trim() || loading || uploading
-                ? 'bg-black/5 text-[var(--color-text-muted)] cursor-not-allowed'
-                : 'btn-primary'
+                ? 'bg-black/5 text-gray-400 cursor-not-allowed'
+                : 'bg-black text-white hover:scale-105 shadow-md'
             }`}
           >
-            {loading ? '...' : 'Send'}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
           </button>
+        </div>
         </div>
       </div>
     </div>

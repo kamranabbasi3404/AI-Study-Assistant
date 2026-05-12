@@ -140,7 +140,13 @@ export async function POST(request: NextRequest) {
         return sendAssistantMessage({ type: 'quiz', questions, message: `Here is a quiz based on your recent notes (${recentTopic.name})! Answers will be saved to your review schedule.` });
       } catch (e) {
         console.error('Failed to generate DB quiz:', e);
-        return sendAssistantMessage({ type: 'chat', answer: 'I tried to generate a quiz, but encountered an error. Please try again.', sources: [] });
+        let errorMessage = e instanceof Error ? e.message : String(e);
+        
+        if (errorMessage.includes('RATE_LIMIT_FAST_FAIL')) {
+          errorMessage = errorMessage.replace('RATE_LIMIT_FAST_FAIL: ', '⚠️ ');
+        }
+        
+        return sendAssistantMessage({ type: 'chat', answer: `I couldn't generate a quiz right now. ${errorMessage}`, sources: [] });
       }
     }
 

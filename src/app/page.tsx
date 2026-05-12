@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookOpen, Target, TrendingUp, Clock, FileText, RotateCcw, MessageSquare } from 'lucide-react';
 
+import LandingPage from '@/components/LandingPage';
+
 interface DashboardStats {
   totalDocuments: number;
   totalQuestionsAnswered: number;
@@ -84,6 +86,10 @@ export default function DashboardPage() {
     );
   }
 
+  if (!isSignedIn) {
+    return <LandingPage />;
+  }
+
   if (!stats) return null;
 
   return (
@@ -94,7 +100,7 @@ export default function DashboardPage() {
         <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-[var(--welcome-glow-2)] rounded-full blur-3xl transition-colors" />
         <div className="relative z-10">
           <h1 className="text-4xl md:text-5xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 via-orange-400 to-amber-500">
-            Welcome back, {user?.firstName || 'Student'}! 👋
+            Welcome back, {user?.firstName || 'Student'}!
           </h1>
           <p className="text-lg md:text-xl font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             Here&apos;s your learning analytics. Let&apos;s crush your goals today.
